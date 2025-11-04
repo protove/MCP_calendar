@@ -1,2 +1,53 @@
+```
+# ==========================================
+# Environment Variables
+# ==========================================
+.env
 .env.dev
 .env.prod
+
+# ==========================================
+# Frontend
+# ==========================================
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/dist/
+frontend/*.log
+frontend/.pnp
+frontend/.pnp.js
+frontend/.eslintcache
+
+# ==========================================
+# Backend
+# ==========================================
+backend/.gradle/
+backend/build/
+backend/bin/
+backend/out/
+backend/*.log
+backend/.gradletasknamecache
+
+# ==========================================
+# IDE
+# ==========================================
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+
+# ==========================================
+# OS
+# ==========================================
+.DS_Store
+Thumbs.db
+*.pid
+
+# ==========================================
+# Docker
+# ==========================================
+*.log
