@@ -5,9 +5,22 @@ FROM node:20-alpine AS deps
 
 WORKDIR /app
 
+# Build arguments for user ID matching
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+# Create user with matching UID/GID to avoid permission issues
+RUN deluser --remove-home node 2>/dev/null || true && \
+    addgroup -g ${GROUP_ID} -S nodegroup && \
+    adduser -u ${USER_ID} -S nodeuser -G nodegroup && \
+    chown -R nodeuser:nodegroup /app
+
+# Switch to non-root user
+USER nodeuser
+
 # Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
-RUN npm ci --prefer-offline --no-audit
+COPY --chown=nodeuser:nodegroup package.json package-lock.json* ./
+RUN npm install --legacy-peer-deps
 
 
 # ============================================
@@ -17,11 +30,24 @@ FROM node:20-alpine AS development
 
 WORKDIR /app
 
+# Build arguments for user ID matching
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+# Create user with matching UID/GID
+RUN deluser --remove-home node 2>/dev/null || true && \
+    addgroup -g ${GROUP_ID} -S nodegroup && \
+    adduser -u ${USER_ID} -S nodeuser -G nodegroup && \
+    chown -R nodeuser:nodegroup /app
+
+# Switch to non-root user
+USER nodeuser
+
 # Copy dependencies
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps --chown=nodeuser:nodegroup /app/node_modules ./node_modules
 
 # Copy source code
-COPY . .
+COPY --chown=nodeuser:nodegroup . .
 
 # Expose port
 EXPOSE 3000
