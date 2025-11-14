@@ -27,11 +27,10 @@ setup-windows.bat
 
 ### 3. 실행
 ```bash
-docker-compose --env-file .env.dev up
+docker-compose --env-file .env.dev up --build -d
 ```
 
 ### 4. 접속
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8080
-
 ---

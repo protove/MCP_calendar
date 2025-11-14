@@ -45,8 +45,7 @@ echo.
 echo 🎉 설정 완료!
 echo.
 echo 다음 단계:
-echo   1. .env.dev 파일을 열어 CLAUDE_API_KEY를 설정하세요
-echo   2. 'docker-compose --env-file .env.dev build' 실행
-echo   3. 'docker-compose --env-file .env.dev up' 실행
+echo   1. 'docker-compose --env-file .env.dev build' 실행
+echo   2. 'docker-compose --env-file .env.dev up' 실행
 echo.
 pause
