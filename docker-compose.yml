@@ -60,7 +60,6 @@ services:
     volumes:
       - ${FRONTEND_SRC_MOUNT:-/tmp/dummy}:/app:delegated
       - /app/node_modules
-      - /app/.next
     depends_on:
       - backend
     networks:
