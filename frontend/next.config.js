@@ -26,6 +26,16 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
+
+  // Transpile FullCalendar packages
+  transpilePackages: [
+    '@fullcalendar/common',
+    '@fullcalendar/core',
+    '@fullcalendar/react',
+    '@fullcalendar/daygrid',
+    '@fullcalendar/timegrid',
+    '@fullcalendar/interaction',
+  ],
 };
 
 module.exports = nextConfig;
