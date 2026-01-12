@@ -1,0 +1,11 @@
+package com.mcp.calandar.model.table
+
+import org.jetbrains.exposed.dao.id.LongIdTable
+import org.jetbrains.exposed.sql.kotlin.datetime.datetime
+
+object UserTable : LongIdTable("users") {
+    val email = varchar("email", 255).uniqueIndex()
+    val password = varchar("password", 255)
+    val name = varchar("name", 100)
+    val createdAt = datetime("created_at")
+}
