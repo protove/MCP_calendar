@@ -1,6 +1,6 @@
-package com.mcp.calaendar.model
+package com.mcp.calendar.model
 
-import java.time.LocalDataTime
+import java.time.LocalDateTime
 
 data class User(
     val id: Long = 0,

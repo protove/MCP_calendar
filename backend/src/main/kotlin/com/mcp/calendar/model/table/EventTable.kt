@@ -1,4 +1,4 @@
-package com.mcp.calandar.model.table
+package com.mcp.calendar.model.table
 
 import org.jetbrains.exposed.dao.id.LongIdTable
 import org.jetbrains.exposed.sql.kotlin.datetime.datetime

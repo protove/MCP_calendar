@@ -1,0 +1,106 @@
+package com.mcp.calendar.controller
+
+import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.validation.FieldError
+import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.annotation.ExceptionHandler
+import org,soringframework.web.bind.annotation.RestControllerAdvice
+import java.time.LocalDateTime
+
+// 전역 예외 처리 핸들러
+@RestControllerAdvice
+class GlobalExceptionHandler {
+    private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+
+    // EventNotFoundException - 404 Not Found
+    @ExceptionHandler(EventNotFoundException::class)
+    fun handleEventNotFoundException(
+        e: EventNotFoundException
+    ): ResponseEntity<ErrorResponse> {
+        logger.warn("EventNotFoundException: {}", e.message)
+
+        val errorResponse = ErrorResponse(
+            timestamp = LocalDateTime.now(),
+            status = HttpStatus.NOT_FOUND.value(),
+            error = HttpStatus.NOT_FOUND.reasonPhrase,
+            message = e.message ?: "일정을 찾을 수 없습니다."
+        )
+
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(errorResponse)
+    }
+
+    // IllegalAtgumentException - 400 Bad Request
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handleIllegalArgumentException(
+        e: IllegalArgumentException
+    ): ResponseEntity<ErrorResponse> {
+        logger.warn("IllegalArgumentException: {}", e.message)
+
+        val errorResponse = ErrorResponse(
+            timestamp = LocalDateTime.now(),
+            status = HttpStatus.BAD_REQUEST.value(),
+            error = HttpStatus.BAD_REQUEST.reasonPhrase,
+            message = e.message ?: "잘못된 요청입니다."
+        )
+
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(errorResponse)
+    }
+
+    // MethodArgumentNotValidException - 400 Bad Request(유효성 검사 실패)
+    @ExceptionHandler(MethodArgumentNotValidException::class)
+    fun handlerValidationException(
+        e: MethodArgumentNotValidException
+    ): ResponseEntity<ErrorResponse> {
+        logger.warn("MethodArgumentNotValidException: {}", e.message)
+
+        val errors = e.bindingResult.allErrors
+            .joinToString(", ") { error ->
+                val fieldName = (error as FieldError).field
+                val errorMessage = error.defaultMessage ?: "유효하지 않은 값"
+                "$fieldName: $errorMessage"
+            }
+        
+        val errorResponse = ErrorResponse(
+            timestamp = LocalDateTime.now(),
+            status = HttpStatus.BAD_REQUEST.value(),
+            error = HttpStatus.BAD_REQUEST.reasonPhrase,
+            message = errors
+        )
+
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(errorResponse)
+    }
+
+    //기타 모든 예외 처리 - 500 Internal Server Error
+    @ExceptionHandler(Exception::class)
+    fun handleGenericExceprion(
+        e: Exception
+    ): ResponseEntity<ErrorResponse> {
+        logger.error("Unhandled exception: ", e)
+
+        val errorResponse = ErrorResponse(
+            timestamp = LocalDateResponse.now(),
+            status = HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            error = HttpStatus.INTERNAL_SERVER_ERROR.reasonPhrase,
+            message = "서버 내부 오류가 발생했습니다."
+        )
+
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(errorResponse)
+    }
+}
+
+data class ErrorResponse(
+    val timestamp: LocalDateTime,
+    val status: Int,
+    val error: String,
+    val message: String
+)

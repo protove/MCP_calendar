@@ -12,10 +12,4 @@ data class Event(
     val endTime: LocalDateTime,
     val createdAt: LocalDateTime = LocalDateTime.now()
     val updatedAt: LocalDateTime = LocalDateTime.now()
-){
-    init{
-        require(endTime.isAfter(startTime)) {
-            "종료 시간은 시작 시간보다 늦어야 합니다."
-        }
-    }
-}
+)
