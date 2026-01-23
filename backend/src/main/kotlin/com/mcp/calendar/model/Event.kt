@@ -12,6 +12,6 @@ data class Event(
     val endTime: LocalDateTime,
     val category: EventCategory = EventCategory.OTHER,
     val allDay: Boolean = false,
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: LocalDateTime = LocalDateTime.now(),
     val updatedAt: LocalDateTime = LocalDateTime.now()
 )

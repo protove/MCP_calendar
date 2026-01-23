@@ -1,5 +1,6 @@
 package com.mcp.calendar.model.table
 
+import com.mcp.calendar.model.table.UserTable
 import org.jetbrains.exposed.dao.id.LongIdTable
 import org.jetbrains.exposed.sql.kotlin.datetime.datetime
 

@@ -29,7 +29,7 @@ class EventService(
             startTime = request.startTime,
             endTime = request.endTime,
             category = EventCategory.fromString(request.category),
-            allDay = request.allDay
+            allDay = request.allDay ?: false
         )
 
         val savedEvent = eventRepository.save(event)
