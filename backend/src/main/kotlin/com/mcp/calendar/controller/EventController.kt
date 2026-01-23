@@ -2,6 +2,7 @@ package com.mcp.calendar.controller
 
 import com.mcp.calendar.dto.request.CreateEventRequest
 import com.mcp.calendar.dto.request.UpdateEventRequest
+import com.mcp.calendar.dto.response.ApiResponse
 import com.mcp.calendar.dto.response.EventResponse
 import com.mcp.calendar.service.EventService
 import jakarta.validation.Valid
@@ -9,58 +10,72 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
+
 @RestController
 @RequestMapping("/api/events")
 class EventController(
     private val eventService: EventService
 ) {
-    
-    // 새로운 일정 생성
+
+    // POST /api/events - 일정 생성
     @PostMapping
     fun createEvent(
         @RequestHeader("X-User-Id") userId: Long,
         @Valid @RequestBody request: CreateEventRequest
-    ): ResponseEntity<EventResponse> {
+    ): ResponseEntity<ApiResponse<EventResponse>> {
         val createdEvent = eventService.createEvent(userId, request)
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdEvent)
+        return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(ApiResponse.success(createdEvent))
     }
 
-    // 특정 일정 조회
+    // GET /api/events/{id} - 일정 단건 조회
     @GetMapping("/{id}")
     fun getEvent(
         @PathVariable id: Long
-    ): ResponseEntity<EventResponse> {
+    ): ResponseEntity<ApiResponse<EventResponse>> {
         val event = eventService.getEvent(id)
-        return ResponseEntity.ok(event)
+        return ResponseEntity.ok(ApiResponse.success(event))
     }
 
-    // 특정 사용자의 모든 일정 조회
+    // GET /api/events - 전체 일정 조회
     @GetMapping
     fun getAllEvents(
         @RequestHeader("X-User-Id") userId: Long
-    ): ResponseEntity<List<EventResponse>> {
-        val events = eventService.getAllEvent(userId)
-        return ResponseEntity.ok(events)
+    ): ResponseEntity<ApiResponse<List<EventResponse>>> {
+        val events = eventService.getAllEvents(userId)
+        return ResponseEntity.ok(ApiResponse.success(events))
     }
 
-    // 일정 수정
+    // GET /api/events/monthly?year=2025&month=1 - 월별 일정 조회
+    @GetMapping("/monthly")
+    fun getMonthlyEvents(
+        @RequestHeader("X-User-Id") userId: Long,
+        @RequestParam year: Int,
+        @RequestParam month: Int
+    ): ResponseEntity<ApiResponse<List<EventResponse>>> {
+        val events = eventService.getMonthlyEvents(userId, year, month)
+        return ResponseEntity.ok(ApiResponse.success(events))
+    }
+
+    // PUT /api/events/{id} - 일정 수정
     @PutMapping("/{id}")
     fun updateEvent(
         @PathVariable id: Long,
         @RequestHeader("X-User-Id") userId: Long,
         @Valid @RequestBody request: UpdateEventRequest
-    ): ResponseEntity<EventResponse> {
+    ): ResponseEntity<ApiResponse<EventResponse>> {
         val updatedEvent = eventService.updateEvent(id, userId, request)
-        return ResponseEntity.ok(updatedEvent)
+        return ResponseEntity.ok(ApiResponse.success(updatedEvent))
     }
 
-    // 일정 삭제
+    // DELETE /api/events/{id} - 일정 삭제
     @DeleteMapping("/{id}")
     fun deleteEvent(
         @PathVariable id: Long,
         @RequestHeader("X-User-Id") userId: Long
-    ): ResponseEntity<Void> {
+    ): ResponseEntity<ApiResponse<Unit>> {
         eventService.deleteEvent(id, userId)
-        return ResponseEntity.noContent().build()
+        return ResponseEntity.ok(ApiResponse.successNoContent())
     }
 }

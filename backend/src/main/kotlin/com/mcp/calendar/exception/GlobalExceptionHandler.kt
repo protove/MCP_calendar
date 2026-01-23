@@ -1,4 +1,4 @@
-package com.mcp.calendar.controller
+package com.mcp.calendar.exception
 
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -6,12 +6,13 @@ import org.springframework.http.ResponseEntity
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
-import org,soringframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.time.LocalDateTime
 
-// 전역 예외 처리 핸들러
+
 @RestControllerAdvice
 class GlobalExceptionHandler {
+
     private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
     // EventNotFoundException - 404 Not Found
@@ -33,7 +34,7 @@ class GlobalExceptionHandler {
             .body(errorResponse)
     }
 
-    // IllegalAtgumentException - 400 Bad Request
+    // IllegalArgumentException - 400 Bad Request
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgumentException(
         e: IllegalArgumentException
@@ -52,20 +53,20 @@ class GlobalExceptionHandler {
             .body(errorResponse)
     }
 
-    // MethodArgumentNotValidException - 400 Bad Request(유효성 검사 실패)
+    // MethodArgumentNotValidException - 400 Bad Request (유효성 검사 실패)
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun handlerValidationException(
+    fun handleValidationException(
         e: MethodArgumentNotValidException
     ): ResponseEntity<ErrorResponse> {
         logger.warn("MethodArgumentNotValidException: {}", e.message)
 
         val errors = e.bindingResult.allErrors
             .joinToString(", ") { error ->
-                val fieldName = (error as FieldError).field
+                val fieldName = (error as? FieldError)?.field ?: "unknown"
                 val errorMessage = error.defaultMessage ?: "유효하지 않은 값"
                 "$fieldName: $errorMessage"
             }
-        
+
         val errorResponse = ErrorResponse(
             timestamp = LocalDateTime.now(),
             status = HttpStatus.BAD_REQUEST.value(),
@@ -78,15 +79,15 @@ class GlobalExceptionHandler {
             .body(errorResponse)
     }
 
-    //기타 모든 예외 처리 - 500 Internal Server Error
+    // 그 외 모든 에러 - 500 Internal Server Error
     @ExceptionHandler(Exception::class)
-    fun handleGenericExceprion(
+    fun handleGenericException(
         e: Exception
     ): ResponseEntity<ErrorResponse> {
         logger.error("Unhandled exception: ", e)
 
         val errorResponse = ErrorResponse(
-            timestamp = LocalDateResponse.now(),
+            timestamp = LocalDateTime.now(),
             status = HttpStatus.INTERNAL_SERVER_ERROR.value(),
             error = HttpStatus.INTERNAL_SERVER_ERROR.reasonPhrase,
             message = "서버 내부 오류가 발생했습니다."
@@ -98,6 +99,7 @@ class GlobalExceptionHandler {
     }
 }
 
+// 에러 응답 DTO
 data class ErrorResponse(
     val timestamp: LocalDateTime,
     val status: Int,

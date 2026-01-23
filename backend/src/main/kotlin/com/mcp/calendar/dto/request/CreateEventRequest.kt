@@ -17,19 +17,19 @@ data class CreateEventRequest(
     @field:Size(max = 255, message = "장소는 255자 이내여야 합니다")
     val location: String? = null,
 
-    @field:JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     val startTime: LocalDateTime,
 
-    @field:JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    val endTime: LocalDateTime
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    val endTime: LocalDateTime,
+
+    val category: String? = "other",
+
+    val allDay: Boolean? = false
 ){
     fun validate() {
-        require(endTime.isAfter(startTime)){
-            "종료 시간은 시작 시간보다 늦어야 합니다"
-        }
-
-        require(!startTime.isBefore(LocalDateTime.now().minusHours(1))) {
-            "과거 1시간 이전의 일정은 생성할 수 없습니다"
+        require(endTime.isAfter(startTime) || endTime.isEqual(startTime)){
+            "종료 시간은 시작 시간과 같거나 늦어야 합니다"
         }
     }
 }

@@ -10,6 +10,8 @@ object EventTable : LongIdTable("events") {
     val location = varchar("location", 255).nullable()
     val startTime = datetime("start_time")
     val endTime = datetime("end_time")
+    val category = varchar("category", 20).default("OTHER")
+    val allDay = bool("all_day").default(false)
     val createdAt = datetime("created_at")
     val updatedAt = datetime("updated_at")
 }
