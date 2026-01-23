@@ -2,29 +2,304 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   MCP Calendar - 글로벌 스타일
+   우주/별자리 테마 (Cosmic Theme)
+   ============================================ */
+
+/* ----------------------------------------
+   CSS 커스텀 속성 (변수) 정의
+   우주 테마 색상 팔레트
+   ---------------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #313647;
+  /* 기본 배경 및 전경 색상 */
+  --background: #141A26;           /* cosmic-dark: 깊은 우주 배경 */
+  --foreground: #E8F1F5;           /* cosmic-white: 밝은 텍스트 */
+  
+  /* 우주 테마 색상 변수 */
+  --cosmic-dark: #141A26;          /* 깊은 우주 배경색 */
+  --cosmic-blue: #42708C;          /* 우주의 파란 빛 */
+  --cosmic-light: #80ADBF;         /* 밝은 하늘빛 */
+  --cosmic-gold: #F2BF91;          /* 별빛 / 따뜻한 액센트 */
+  --cosmic-red: #733C3C;           /* 붉은 별 / 경고색 */
+  --cosmic-white: #E8F1F5;         /* 텍스트용 밝은 색 */
+  --cosmic-gray: #9BADB8;          /* 보조 텍스트용 */
+  
+  /* 그라데이션 색상 */
+  --cosmic-gradient-start: #141A26;
+  --cosmic-gradient-mid: #1a2332;
+  --cosmic-gradient-end: #0d1117;
+  
+  /* 추가 UI 색상 변수 */
+  --ring-color: rgba(128, 173, 191, 0.5);
+  --focus-ring: 0 0 0 2px var(--ring-color);
+  --cosmic-glow-sm: 0 0 10px rgba(128, 173, 191, 0.3);
+  --cosmic-glow-md: 0 0 20px rgba(128, 173, 191, 0.4);
+  --cosmic-glow-lg: 0 0 30px rgba(128, 173, 191, 0.5);
+  --cosmic-glow-gold: 0 0 20px rgba(242, 191, 145, 0.4);
+  
+  /* 글래스모피즘 변수 */
+  --glass-bg: rgba(20, 26, 38, 0.7);
+  --glass-border: rgba(128, 173, 191, 0.2);
+  --glass-blur: 12px;
 }
 
+/* 다크 모드에서도 동일한 우주 테마 유지 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #141A26;
+    --foreground: #E8F1F5;
   }
 }
 
+/* ----------------------------------------
+   기본 body 스타일
+   우주 배경 그라데이션 적용
+   ---------------------------------------- */
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
+               'Helvetica Neue', Arial, sans-serif;
+  
+  /* 우주 배경 그라데이션 - 깊이감 있는 우주 효과 */
+  background: linear-gradient(
+    135deg,
+    var(--cosmic-gradient-start) 0%,
+    var(--cosmic-gradient-mid) 50%,
+    var(--cosmic-gradient-end) 100%
+  );
+  
+  /* 뷰포트 전체 높이 및 반복 방지 */
+  min-height: 100vh;
+  background-attachment: fixed;
 }
 
-/* FullCalendar 스타일 오버라이드 - custom-dark (#313647) 적용 */
+/* ----------------------------------------
+   로딩/스피너 애니메이션
+   ---------------------------------------- */
+
+/* 별 펄스 애니메이션 - 로딩 스피너용 */
+@keyframes cosmic-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+}
+
+/* 궤도 회전 애니메이션 */
+@keyframes cosmic-orbit {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 별똥별 애니메이션 */
+@keyframes cosmic-shooting {
+  0% {
+    transform: translateX(0) translateY(0);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(200px) translateY(200px);
+    opacity: 0;
+  }
+}
+
+/* 스피너 도트 바운스 */
+@keyframes cosmic-bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+/* 페이드인업 애니메이션 */
+@keyframes cosmic-fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 페이드인 스케일 애니메이션 */
+@keyframes cosmic-fade-in-scale {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 링 펄스 애니메이션 */
+@keyframes cosmic-ring-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(128, 173, 191, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(128, 173, 191, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(128, 173, 191, 0);
+  }
+}
+
+/* 스피너 애니메이션 클래스 */
+.animate-cosmic-pulse {
+  animation: cosmic-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-cosmic-orbit {
+  animation: cosmic-orbit 2s linear infinite;
+}
+
+.animate-cosmic-bounce {
+  animation: cosmic-bounce 1.4s ease-in-out infinite both;
+}
+
+.animate-cosmic-fade-in-up {
+  animation: cosmic-fade-in-up 0.3s ease-out;
+}
+
+.animate-cosmic-fade-in-scale {
+  animation: cosmic-fade-in-scale 0.2s ease-out;
+}
+
+/* ----------------------------------------
+   별자리 효과 (Starfield Effect)
+   CSS만으로 구현한 은하수/별 효과
+   ---------------------------------------- */
+.cosmic-starfield {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+/* 작은 별들 - 흩뿌려진 별빛 효과 */
+.cosmic-starfield::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    /* 작은 별들 - 밀집된 패턴 */
+    radial-gradient(1px 1px at 10% 20%, var(--cosmic-white) 50%, transparent 50%),
+    radial-gradient(1px 1px at 20% 50%, var(--cosmic-gray) 50%, transparent 50%),
+    radial-gradient(1px 1px at 30% 10%, var(--cosmic-light) 50%, transparent 50%),
+    radial-gradient(1px 1px at 40% 80%, var(--cosmic-white) 50%, transparent 50%),
+    radial-gradient(1px 1px at 50% 30%, var(--cosmic-gray) 50%, transparent 50%),
+    radial-gradient(1px 1px at 60% 70%, var(--cosmic-light) 50%, transparent 50%),
+    radial-gradient(1px 1px at 70% 15%, var(--cosmic-white) 50%, transparent 50%),
+    radial-gradient(1px 1px at 80% 45%, var(--cosmic-gray) 50%, transparent 50%),
+    radial-gradient(1px 1px at 90% 85%, var(--cosmic-light) 50%, transparent 50%),
+    radial-gradient(1px 1px at 15% 65%, var(--cosmic-white) 50%, transparent 50%),
+    radial-gradient(1px 1px at 25% 35%, var(--cosmic-gray) 50%, transparent 50%),
+    radial-gradient(1px 1px at 85% 25%, var(--cosmic-light) 50%, transparent 50%);
+  background-size: 200px 200px;
+  opacity: 0.4;
+  animation: cosmic-twinkle 4s ease-in-out infinite alternate;
+}
+
+/* 큰 별들 - 밝게 빛나는 별 효과 */
+.cosmic-starfield::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    /* 밝은 별들 - 골드 및 라이트 블루 */
+    radial-gradient(2px 2px at 5% 30%, var(--cosmic-gold) 50%, transparent 50%),
+    radial-gradient(2px 2px at 25% 80%, var(--cosmic-light) 50%, transparent 50%),
+    radial-gradient(3px 3px at 45% 10%, var(--cosmic-gold) 30%, transparent 60%),
+    radial-gradient(2px 2px at 65% 60%, var(--cosmic-light) 50%, transparent 50%),
+    radial-gradient(3px 3px at 85% 40%, var(--cosmic-gold) 30%, transparent 60%),
+    radial-gradient(2px 2px at 95% 90%, var(--cosmic-light) 50%, transparent 50%);
+  background-size: 300px 300px;
+  opacity: 0.6;
+  animation: cosmic-twinkle 3s ease-in-out infinite alternate-reverse;
+}
+
+/* 별 반짝임 애니메이션 */
+@keyframes cosmic-twinkle {
+  0% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0.5;
+    transform: scale(1.02);
+  }
+}
+
+/* ----------------------------------------
+   은하수 글로우 효과
+   배경에 은은한 빛 효과 추가
+   ---------------------------------------- */
+.cosmic-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -2;
+  background: 
+    /* 왼쪽 상단 블루 글로우 */
+    radial-gradient(ellipse 50% 40% at 10% 20%, 
+      rgba(66, 112, 140, 0.15) 0%, 
+      transparent 60%),
+    /* 오른쪽 하단 골드 글로우 */
+    radial-gradient(ellipse 40% 50% at 90% 80%, 
+      rgba(242, 191, 145, 0.1) 0%, 
+      transparent 60%),
+    /* 중앙 라이트 블루 글로우 */
+    radial-gradient(ellipse 60% 40% at 50% 50%, 
+      rgba(128, 173, 191, 0.08) 0%, 
+      transparent 70%);
+}
+
+/* ----------------------------------------
+   FullCalendar 스타일 오버라이드
+   우주 테마 색상 적용
+   ---------------------------------------- */
+
+/* FullCalendar 기본 텍스트 색상 */
 .fc {
-  --fc-text-color: #313647;
+  --fc-text-color: var(--cosmic-white);
+  --fc-border-color: rgba(128, 173, 191, 0.2);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: rgba(66, 112, 140, 0.1);
+  --fc-today-bg-color: rgba(242, 191, 145, 0.1);
 }
 
+/* 캘린더 제목, 날짜, 헤더 텍스트 */
 .fc .fc-toolbar-title,
 .fc .fc-col-header-cell-cushion,
 .fc .fc-daygrid-day-number,
@@ -32,24 +307,572 @@ body {
 .fc .fc-timegrid-slot-label,
 .fc .fc-list-day-text,
 .fc .fc-list-day-side-text {
-  color: #313647;
+  color: var(--cosmic-white);
 }
 
+/* 요일 헤더 스타일 */
+.fc .fc-col-header-cell-cushion {
+  color: var(--cosmic-light);
+  font-weight: 600;
+}
+
+/* 날짜 숫자 스타일 */
+.fc .fc-daygrid-day-number {
+  color: var(--cosmic-gray);
+  transition: color 0.2s ease;
+}
+
+.fc .fc-daygrid-day:hover .fc-daygrid-day-number {
+  color: var(--cosmic-gold);
+}
+
+/* 오늘 날짜 강조 */
+.fc .fc-day-today {
+  background-color: rgba(242, 191, 145, 0.08) !important;
+}
+
+.fc .fc-day-today .fc-daygrid-day-number {
+  color: var(--cosmic-gold);
+  font-weight: bold;
+}
+
+/* 버튼 기본 스타일 */
 .fc .fc-button {
-  color: #313647;
-  background-color: transparent;
-  border-color: #313647;
+  color: var(--cosmic-light);
+  background-color: rgba(66, 112, 140, 0.2);
+  border-color: var(--cosmic-blue);
+  border-radius: 6px;
+  transition: all 0.2s ease;
 }
 
+/* 버튼 호버 상태 */
 .fc .fc-button:hover {
-  background-color: #313647;
-  color: white;
-  border-color: #313647;
+  background-color: var(--cosmic-blue);
+  color: var(--cosmic-white);
+  border-color: var(--cosmic-light);
+  box-shadow: 0 0 12px rgba(66, 112, 140, 0.4);
 }
 
+/* 버튼 활성화 상태 */
 .fc .fc-button-active,
 .fc .fc-button:active {
-  background-color: #435663 !important;
-  color: white !important;
-  border-color: #435663 !important;
+  background-color: var(--cosmic-blue) !important;
+  color: var(--cosmic-white) !important;
+  border-color: var(--cosmic-light) !important;
+  box-shadow: 0 0 16px rgba(128, 173, 191, 0.5) !important;
+}
+
+/* 이벤트 스타일 */
+.fc .fc-event {
+  background-color: var(--cosmic-blue);
+  border-color: var(--cosmic-light);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.fc .fc-event:hover {
+  background-color: var(--cosmic-light);
+  box-shadow: 0 0 10px rgba(128, 173, 191, 0.5);
+  transform: translateY(-1px);
+}
+
+/* 이벤트 텍스트 */
+.fc .fc-event-title,
+.fc .fc-event-time {
+  color: var(--cosmic-white);
+}
+
+/* 테두리 스타일 */
+.fc .fc-scrollgrid,
+.fc .fc-scrollgrid-section > td {
+  border-color: rgba(128, 173, 191, 0.15);
+}
+
+.fc .fc-daygrid-day {
+  border-color: rgba(128, 173, 191, 0.1);
+}
+
+/* ----------------------------------------
+   CalendarView용 커스텀 FullCalendar 스타일
+   cosmic-calendar 클래스 기반 스타일링
+   ---------------------------------------- */
+
+/* 메인 캘린더 컨테이너 */
+.cosmic-calendar {
+  padding: 1rem;
+}
+
+.cosmic-calendar .fc {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* 셀 헤더 (요일) 스타일 */
+.cosmic-calendar .fc .fc-col-header-cell {
+  background: linear-gradient(180deg, rgba(66, 112, 140, 0.15) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(128, 173, 191, 0.2);
+  padding: 0.75rem 0;
+}
+
+.cosmic-calendar .fc .fc-col-header-cell-cushion {
+  color: var(--cosmic-light);
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* 일요일 색상 */
+.cosmic-calendar .fc .fc-day-sun .fc-col-header-cell-cushion,
+.cosmic-calendar .fc .fc-day-sun .fc-daygrid-day-number {
+  color: rgba(115, 60, 60, 0.8);
+}
+
+/* 토요일 색상 */
+.cosmic-calendar .fc .fc-day-sat .fc-col-header-cell-cushion,
+.cosmic-calendar .fc .fc-day-sat .fc-daygrid-day-number {
+  color: var(--cosmic-blue);
+}
+
+/* 날짜 셀 스타일 */
+.cosmic-calendar .fc .fc-daygrid-day {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.cosmic-calendar .fc .fc-daygrid-day:hover {
+  background: rgba(66, 112, 140, 0.1);
+}
+
+.cosmic-calendar .fc .fc-daygrid-day-number {
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* 주말 셀 배경 */
+.cosmic-calendar .fc .fc-day-sat,
+.cosmic-calendar .fc .fc-day-sun {
+  background: rgba(66, 112, 140, 0.03);
+}
+
+/* 오늘 날짜 강조 - 코스믹 글로우 효과 */
+.cosmic-calendar .fc .fc-day-today {
+  background: linear-gradient(135deg, rgba(242, 191, 145, 0.08) 0%, rgba(242, 191, 145, 0.02) 100%) !important;
+  position: relative;
+}
+
+.cosmic-calendar .fc .fc-day-today::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(242, 191, 145, 0.3);
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: inset 0 0 20px rgba(242, 191, 145, 0.1);
+}
+
+.cosmic-calendar .fc .fc-day-today .fc-daygrid-day-number {
+  color: var(--cosmic-gold);
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(242, 191, 145, 0.5);
+}
+
+/* 이벤트 스타일 오버라이드 */
+.cosmic-calendar .fc .fc-event {
+  border: none;
+  border-radius: 6px;
+  padding: 2px 4px;
+  margin: 1px 2px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.cosmic-calendar .fc .fc-event:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* 종일 이벤트 스타일 */
+.cosmic-calendar .fc .fc-daygrid-event-harness {
+  margin-top: 2px;
+}
+
+.cosmic-calendar .fc .fc-daygrid-block-event {
+  border-radius: 6px;
+}
+
+/* 더보기 링크 */
+.cosmic-calendar .fc .fc-daygrid-more-link {
+  color: var(--cosmic-light);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(66, 112, 140, 0.2);
+  transition: all 0.2s ease;
+}
+
+.cosmic-calendar .fc .fc-daygrid-more-link:hover {
+  background: rgba(66, 112, 140, 0.4);
+  color: var(--cosmic-white);
+}
+
+/* 시간 그리드 뷰 스타일 */
+.cosmic-calendar .fc .fc-timegrid-slot {
+  height: 48px;
+  border-color: rgba(128, 173, 191, 0.1);
+}
+
+.cosmic-calendar .fc .fc-timegrid-slot-label-cushion {
+  color: var(--cosmic-gray);
+  font-size: 0.75rem;
+}
+
+.cosmic-calendar .fc .fc-timegrid-now-indicator-line {
+  border-color: var(--cosmic-gold);
+  border-width: 2px;
+}
+
+.cosmic-calendar .fc .fc-timegrid-now-indicator-arrow {
+  border-color: var(--cosmic-gold);
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+}
+
+/* 현재 시간 인디케이터 글로우 */
+.cosmic-calendar .fc .fc-timegrid-now-indicator-line::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -2px;
+  height: 4px;
+  background: linear-gradient(90deg, var(--cosmic-gold), transparent);
+  filter: blur(4px);
+}
+
+/* 스크롤 영역 */
+.cosmic-calendar .fc .fc-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cosmic-blue) transparent;
+}
+
+.cosmic-calendar .fc .fc-scroller::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cosmic-calendar .fc .fc-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cosmic-calendar .fc .fc-scroller::-webkit-scrollbar-thumb {
+  background: var(--cosmic-blue);
+  border-radius: 3px;
+}
+
+/* 선택 영역 스타일 */
+.cosmic-calendar .fc .fc-highlight {
+  background: rgba(128, 173, 191, 0.2);
+  border: 1px dashed var(--cosmic-light);
+}
+
+/* 테두리 색상 통일 */
+.cosmic-calendar .fc th,
+.cosmic-calendar .fc td {
+  border-color: rgba(128, 173, 191, 0.1);
+}
+
+.cosmic-calendar .fc .fc-scrollgrid {
+  border-color: rgba(128, 173, 191, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 종일 영역 */
+.cosmic-calendar .fc .fc-daygrid-body-natural .fc-daygrid-day-events {
+  margin-bottom: 0.5rem;
+}
+
+/* 팝오버 스타일 */
+.cosmic-calendar .fc .fc-popover {
+  background: var(--cosmic-dark);
+  border: 1px solid rgba(128, 173, 191, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.cosmic-calendar .fc .fc-popover-header {
+  background: rgba(66, 112, 140, 0.2);
+  padding: 0.75rem;
+  border-bottom: 1px solid rgba(128, 173, 191, 0.2);
+}
+
+.cosmic-calendar .fc .fc-popover-title {
+  color: var(--cosmic-white);
+  font-weight: 600;
+}
+
+.cosmic-calendar .fc .fc-popover-body {
+  padding: 0.5rem;
+}
+
+/* ----------------------------------------
+   유틸리티 클래스
+   우주 테마용 추가 스타일
+   ---------------------------------------- */
+
+/* 글로우 텍스트 효과 */
+.cosmic-text-glow {
+  text-shadow: 0 0 10px rgba(242, 191, 145, 0.5);
+}
+
+/* 골드 액센트 텍스트 */
+.cosmic-accent {
+  color: var(--cosmic-gold);
+}
+
+/* 카드 스타일 - 반투명 우주 배경 */
+.cosmic-card {
+  background: rgba(20, 26, 38, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(128, 173, 191, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* 호버 글로우 효과 */
+.cosmic-hover-glow:hover {
+  box-shadow: 0 0 20px rgba(66, 112, 140, 0.4);
+  transition: box-shadow 0.3s ease;
+}
+
+/* 스크롤바 우주 테마 스타일 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(20, 26, 38, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--cosmic-blue) 0%, var(--cosmic-light) 100%);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--cosmic-light) 0%, var(--cosmic-gold) 100%);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox 스크롤바 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cosmic-blue) rgba(20, 26, 38, 0.5);
+}
+
+/* ----------------------------------------
+   스켈레톤 로딩 애니메이션
+   LoadingSkeleton 컴포넌트용
+   ---------------------------------------- */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* 스켈레톤 쉬머 효과 */
+.cosmic-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(66, 112, 140, 0.1) 0%,
+    rgba(128, 173, 191, 0.2) 50%,
+    rgba(66, 112, 140, 0.1) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ----------------------------------------
+   글래스모피즘 유틸리티 클래스
+   ---------------------------------------- */
+.cosmic-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+}
+
+.cosmic-glass-sm {
+  background: rgba(20, 26, 38, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(128, 173, 191, 0.15);
+}
+
+.cosmic-glass-lg {
+  background: rgba(20, 26, 38, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(128, 173, 191, 0.25);
+}
+
+/* ----------------------------------------
+   우주 테마 유틸리티 클래스
+   ---------------------------------------- */
+
+/* 글로우 텍스트 효과 */
+.cosmic-text-glow {
+  text-shadow: 0 0 10px rgba(242, 191, 145, 0.5);
+}
+
+.cosmic-text-glow-blue {
+  text-shadow: 0 0 10px rgba(128, 173, 191, 0.5);
+}
+
+/* 골드 액센트 텍스트 */
+.cosmic-accent {
+  color: var(--cosmic-gold);
+}
+
+/* 그라데이션 텍스트 */
+.cosmic-gradient-text {
+  background: linear-gradient(135deg, var(--cosmic-light) 0%, var(--cosmic-gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 카드 스타일 - 반투명 우주 배경 */
+.cosmic-card {
+  background: rgba(20, 26, 38, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(128, 173, 191, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* 호버 글로우 효과 */
+.cosmic-hover-glow {
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.cosmic-hover-glow:hover {
+  box-shadow: 0 0 20px rgba(66, 112, 140, 0.4);
+  border-color: rgba(128, 173, 191, 0.4);
+}
+
+/* 버튼 글로우 효과 */
+.cosmic-button-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.cosmic-button-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(45deg, 
+    transparent, 
+    rgba(128, 173, 191, 0.3), 
+    transparent
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+  border-radius: inherit;
+}
+
+.cosmic-button-glow:hover::before {
+  opacity: 1;
+}
+
+/* 포커스 링 유틸리티 */
+.cosmic-focus-ring:focus {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.cosmic-focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--cosmic-dark), 0 0 0 4px var(--cosmic-light);
+}
+
+/* 그라데이션 보더 효과 */
+.cosmic-gradient-border {
+  position: relative;
+  background: var(--cosmic-dark);
+  border-radius: 12px;
+}
+
+.cosmic-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(135deg, var(--cosmic-blue), var(--cosmic-light), var(--cosmic-gold));
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0.5;
+}
+
+/* 비활성화 상태 */
+.cosmic-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* 인터랙티브 요소 기본 트랜지션 */
+.cosmic-transition {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cosmic-transition-slow {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 입력 필드 공통 스타일 */
+.cosmic-input {
+  background: rgba(20, 26, 38, 0.6);
+  border: 1px solid rgba(66, 112, 140, 0.3);
+  color: var(--cosmic-white);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.cosmic-input:focus {
+  border-color: var(--cosmic-light);
+  box-shadow: 0 0 15px rgba(128, 173, 191, 0.3);
+  outline: none;
+}
+
+.cosmic-input::placeholder {
+  color: var(--cosmic-gray);
+  opacity: 0.6;
+}
+
+/* 에러 상태 입력 */
+.cosmic-input-error {
+  border-color: var(--cosmic-red) !important;
+  box-shadow: 0 0 10px rgba(115, 60, 60, 0.3);
+}
+
+/* 성공 상태 입력 */
+.cosmic-input-success {
+  border-color: var(--cosmic-gold) !important;
+  box-shadow: 0 0 10px rgba(242, 191, 145, 0.3);
 }

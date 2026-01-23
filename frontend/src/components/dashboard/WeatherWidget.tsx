@@ -1,35 +1,197 @@
 "use client";
 
-import { CloudSun, Shirt, Umbrella } from "lucide-react";
+import { motion } from "framer-motion";
+import { 
+  CloudSun, 
+  Shirt, 
+  Droplets, 
+  Wind, 
+  Thermometer,
+  Sun,
+  Cloud,
+  CloudRain,
+  Snowflake,
+} from "lucide-react";
+
+/**
+ * WeatherWidget - 날씨 정보 위젯
+ * 
+ * 현재 날씨와 옷차림 추천을 보여주는 위젯
+ * - 온도, 습도, 풍속 표시
+ * - 날씨에 따른 아이콘 변경
+ * - 옷차림 추천 기능
+ */
+
+// 날씨 타입 정의
+interface WeatherData {
+  temp: number;
+  feelsLike: number;
+  condition: "sunny" | "cloudy" | "partly-cloudy" | "rainy" | "snowy";
+  conditionText: string;
+  humidity: number;
+  windSpeed: number;
+  recommendation: string;
+}
+
+// Mock 데이터 - 실제 날씨 API 연동 시 교체
+const mockWeather: WeatherData = {
+  temp: 3,
+  feelsLike: -1,
+  condition: "partly-cloudy",
+  conditionText: "구름 조금",
+  humidity: 45,
+  windSpeed: 12,
+  recommendation: "오늘은 쌀쌀해요. 따뜻한 코트와 목도리를 추천드려요!",
+};
+
+// 날씨 조건에 따른 아이콘 반환
+function getWeatherIcon(condition: WeatherData["condition"]) {
+  const iconClass = "h-16 w-16";
+  
+  switch (condition) {
+    case "sunny":
+      return <Sun className={`${iconClass} text-cosmic-gold`} />;
+    case "cloudy":
+      return <Cloud className={`${iconClass} text-cosmic-gray`} />;
+    case "partly-cloudy":
+      return <CloudSun className={`${iconClass} text-cosmic-gold`} />;
+    case "rainy":
+      return <CloudRain className={`${iconClass} text-cosmic-light`} />;
+    case "snowy":
+      return <Snowflake className={`${iconClass} text-cosmic-white`} />;
+    default:
+      return <CloudSun className={`${iconClass} text-cosmic-gold`} />;
+  }
+}
+
+// 날씨 조건에 따른 배경 그라데이션
+function getWeatherGradient(condition: WeatherData["condition"]) {
+  switch (condition) {
+    case "sunny":
+      return "from-cosmic-gold/20 via-cosmic-dark/80 to-cosmic-dark";
+    case "cloudy":
+      return "from-cosmic-gray/20 via-cosmic-dark/80 to-cosmic-dark";
+    case "partly-cloudy":
+      return "from-cosmic-blue/20 via-cosmic-dark/80 to-cosmic-dark";
+    case "rainy":
+      return "from-cosmic-blue/30 via-cosmic-dark/80 to-cosmic-dark";
+    case "snowy":
+      return "from-cosmic-light/20 via-cosmic-dark/80 to-cosmic-dark";
+    default:
+      return "from-cosmic-blue/20 via-cosmic-dark/80 to-cosmic-dark";
+  }
+}
 
 export function WeatherWidget() {
-    // Mock data
-    const weather = {
-        temp: 18,
-        condition: "Partly Cloudy",
-        humidity: 45,
-        recommendation: "It's a bit chilly. A light jacket or a cardigan would be perfect.",
-    };
+  const weather = mockWeather;
 
-    return (
-        <div className="mb-6 rounded-lg bg-gradient-to-r from-custom-slate to-custom-dark p-6 text-white shadow-md">
-            <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-                <div className="flex items-center gap-4">
-                    <CloudSun className="h-12 w-12 text-custom-cream" />
-                    <div>
-                        <h3 className="text-2xl font-bold">{weather.temp}°C</h3>
-                        <p className="text-custom-cream">{weather.condition}</p>
-                    </div>
-                </div>
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.15 }}
+      className={`group relative overflow-hidden rounded-xl border border-cosmic-blue/20 
+                  bg-gradient-to-br ${getWeatherGradient(weather.condition)}
+                  p-6 backdrop-blur-sm transition-all duration-300
+                  hover:border-cosmic-blue/30 hover:shadow-lg hover:shadow-cosmic-blue/5`}
+    >
+      {/* 배경 장식 - 별 효과 */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(8)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute h-1 w-1 rounded-full bg-cosmic-white/30"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              opacity: [0.3, 1, 0.3],
+              scale: [1, 1.2, 1],
+            }}
+            transition={{
+              duration: 2 + Math.random() * 2,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+            }}
+          />
+        ))}
+      </div>
 
-                <div className="flex items-start gap-3 rounded-md bg-white/10 p-3 backdrop-blur-sm">
-                    <Shirt className="mt-1 h-5 w-5 text-custom-green" />
-                    <div>
-                        <p className="font-semibold text-custom-green">Outfit Recommendation</p>
-                        <p className="text-sm text-gray-200">{weather.recommendation}</p>
-                    </div>
-                </div>
+      <div className="relative z-10">
+        {/* 상단: 온도와 날씨 아이콘 */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="mb-1 text-sm text-cosmic-gray">현재 날씨</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-5xl font-bold text-cosmic-white">
+                {weather.temp}°
+              </span>
+              <span className="text-xl text-cosmic-gray">C</span>
             </div>
+            <p className="mt-1 text-cosmic-light">{weather.conditionText}</p>
+          </div>
+
+          <motion.div
+            animate={{ y: [0, -5, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
+            {getWeatherIcon(weather.condition)}
+          </motion.div>
         </div>
-    );
+
+        {/* 중간: 상세 정보 */}
+        <div className="mt-5 grid grid-cols-3 gap-4 border-t border-cosmic-blue/10 pt-4">
+          <div className="flex items-center gap-2">
+            <Thermometer className="h-4 w-4 text-cosmic-light" />
+            <div>
+              <p className="text-xs text-cosmic-gray">체감온도</p>
+              <p className="text-sm font-medium text-cosmic-white">
+                {weather.feelsLike}°C
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Droplets className="h-4 w-4 text-cosmic-light" />
+            <div>
+              <p className="text-xs text-cosmic-gray">습도</p>
+              <p className="text-sm font-medium text-cosmic-white">
+                {weather.humidity}%
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Wind className="h-4 w-4 text-cosmic-light" />
+            <div>
+              <p className="text-xs text-cosmic-gray">풍속</p>
+              <p className="text-sm font-medium text-cosmic-white">
+                {weather.windSpeed}km/h
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 하단: 옷차림 추천 */}
+        <div className="mt-4 flex items-start gap-3 rounded-lg border border-cosmic-gold/20 
+                        bg-cosmic-gold/10 p-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg 
+                          bg-cosmic-gold/20">
+            <Shirt className="h-4 w-4 text-cosmic-gold" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-cosmic-gold">오늘의 옷차림</p>
+            <p className="mt-0.5 text-sm text-cosmic-white/90">
+              {weather.recommendation}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 배경 글로우 효과 */}
+      <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full 
+                      bg-cosmic-gold/10 blur-3xl transition-all group-hover:bg-cosmic-gold/15" />
+    </motion.div>
+  );
 }
