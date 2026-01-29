@@ -34,6 +34,23 @@ class GlobalExceptionHandler {
             .body(errorResponse)
     }
 
+    // TransactionNotFoundException - 404 Not Found
+    @ExceptionHandler(TransactionNotFoundException::class)
+    fun handleTransactionNotFoundException(e: TransactionNotFoundException): ResponseEntity<ErrorResponse> {
+        logger.warn("TransactionNotFoundException: {}", e.message)
+
+        val errorResponse = ErrorResponse(
+            timestamp = LocalDateTime.now(),
+            status = HttpStatus.NOT_FOUND.value(),
+            error = HttpStatus.NOT_FOUND.reasonPhrase,
+            message = e.message ?: "거래 내역을 찾을 수 없습니다."
+        )
+
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(errorResponse)
+    }
+
     // IllegalArgumentException - 400 Bad Request
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgumentException(
@@ -97,6 +114,8 @@ class GlobalExceptionHandler {
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(errorResponse)
     }
+
+
 }
 
 // 에러 응답 DTO

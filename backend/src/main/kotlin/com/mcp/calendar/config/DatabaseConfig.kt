@@ -2,6 +2,7 @@ package com.mcp.calendar.config
 
 import com.mcp.calendar.model.table.EventTable
 import com.mcp.calendar.model.table.UserTable
+import com.mcp.calendar.model.table.TransactionTable
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -22,7 +23,8 @@ class DatabaseConfig(
         transaction {
             SchemaUtils.createMissingTablesAndColumns(
                 UserTable,
-                EventTable
+                EventTable,
+                TransactionTable
             )
         }
     }
