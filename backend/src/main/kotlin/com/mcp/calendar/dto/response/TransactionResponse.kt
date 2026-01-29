@@ -10,7 +10,7 @@ data class TransactionResponse(
     val type: String,
     val category: String,
     val amount: BigDecimal,
-    val description: String,
+    val description: String?,
     val date: String,
     val memo: String?,
 

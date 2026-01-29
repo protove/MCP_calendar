@@ -6,6 +6,8 @@ import com.mcp.calendar.model.TransactionCategory
 import com.mcp.calendar.model.table.TransactionTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -21,7 +23,7 @@ class TransactionRepository {
             it[type] = transaction.type.name
             it[category] = transaction.category.name
             it[amount] = transaction.amount
-            it[description] = transaction.description
+            it[description] = transaction.description ?: ""
             it[date] = transaction.date
             it[memo] = transaction.memo
             it[createdAt] = transaction.createdAt
@@ -35,16 +37,14 @@ class TransactionRepository {
 
     @Transactional(readOnly = true)
     fun findById(id: Long): Transaction? {
-        return TransactionTable.selectAll()
-            .where { TransactionTable.id eq id }
+        return TransactionTable.select { TransactionTable.id eq id }
             .map { rowToTransaction(it) }
             .singleOrNull()
     }
 
     @Transactional(readOnly = true)
     fun findAllByUserId(userId: Long): List<Transaction> {
-        return TransactionTable.selectAll()
-            .where { TransactionTable.userId eq userId }
+        return TransactionTable.select { TransactionTable.userId eq userId }
             .orderBy(TransactionTable.date, SortOrder.DESC)
             .map { rowToTransaction(it) }
     }
@@ -55,12 +55,11 @@ class TransactionRepository {
         val startOfMonth = LocalDate.of(year, month, 1)
         val endOfMonth = startOfMonth.plusMonths(1).minusDays(1)
 
-        return TransactionTable.selectAll()
-            .where {
-                (TransactionTable.userId eq userId) and
-                (TransactionTable.date greaterEq startOfMonth) and
-                (TransactionTable.date lessEq endOfMonth)
-            }
+        return TransactionTable.select {
+            (TransactionTable.userId eq userId) and
+            (TransactionTable.date greaterEq startOfMonth) and
+            (TransactionTable.date lessEq endOfMonth)
+        }
             .orderBy(TransactionTable.date, SortOrder.DESC)
             .map { rowToTransaction(it) }
     }
@@ -68,12 +67,11 @@ class TransactionRepository {
     //특정 사용자 기간별 거래내역
     @Transactional(readOnly = true)
     fun findByUserIdAndDateRange(userId: Long, startDate: LocalDate, endDate: LocalDate): List<Transaction> {
-        return TransactionTable.selectAll()
-            .where {
-                (TransactionTable.userId eq userId) and
-                (TransactionTable.date greaterEq startDate) and
-                (TransactionTable.date lessEq endDate)
-            }
+        return TransactionTable.select {
+            (TransactionTable.userId eq userId) and
+            (TransactionTable.date greaterEq startDate) and
+            (TransactionTable.date lessEq endDate)
+        }
             .orderBy(TransactionTable.date, SortOrder.DESC)
             .map { rowToTransaction(it) }
     }
@@ -81,11 +79,10 @@ class TransactionRepository {
     //특정 사용자 거래 유형별 조회(수입/지출)
     @Transactional(readOnly = true)
     fun findByUserIdAndType(userId: Long, type: TransactionType): List<Transaction> {
-        return TransactionTable.selectAll()
-            .where {
-                (TransactionTable.userId eq userId) and
-                (TransactionTable.type eq type.name)
-            }
+        return TransactionTable.select {
+            (TransactionTable.userId eq userId) and
+            (TransactionTable.type eq type.name)
+        }
             .orderBy(TransactionTable.date, SortOrder.DESC)
             .map { rowToTransaction(it) }
     }
@@ -93,11 +90,10 @@ class TransactionRepository {
     //특정 사용자 카테고리별 조회
     @Transactional(readOnly = true)
     fun findByUserIdAndCategory(userId: Long, category: TransactionCategory): List<Transaction> {
-        return TransactionTable.selectAll()
-            .where {
-                (TransactionTable.userId eq userId) and
-                (TransactionTable.category eq category.name)
-            }
+        return TransactionTable.select {
+            (TransactionTable.userId eq userId) and
+            (TransactionTable.category eq category.name)
+        }
             .orderBy(TransactionTable.date, SortOrder.DESC)
             .map { rowToTransaction(it) }
     }
@@ -108,24 +104,23 @@ class TransactionRepository {
         val startOfMonth = LocalDate.of(year, month, 1)
         val endOfMonth = startOfMonth.plusMonths(1).minusDays(1)
 
-        return TransactionTable.selectAll()
-            .where {
-                (TransactionTable.userId eq userId) and
-                (TransactionTable.date greaterEq startOfMonth) and
-                (TransactionTable.date lessEq endOfMonth) and
-                (TransactionTable.type eq type.name)
-            }
+        return TransactionTable.select {
+            (TransactionTable.userId eq userId) and
+            (TransactionTable.date greaterEq startOfMonth) and
+            (TransactionTable.date lessEq endOfMonth) and
+            (TransactionTable.type eq type.name)
+        }
             .orderBy(TransactionTable.date, SortOrder.DESC)
             .map { rowToTransaction(it) }
     }
 
     //거래 내역 수정
-    fun update(id: Long, transaction: Transaction): Boolean {
+    fun update(id: Long, transaction: Transaction): Transaction? {
         val updatedCount = TransactionTable.update({ TransactionTable.id eq id }) {
             it[type] = transaction.type.name
             it[category] = transaction.category.name
             it[amount] = transaction.amount
-            it[description] = transaction.description
+            it[description] = transaction.description ?: ""
             it[date] = transaction.date
             it[memo] = transaction.memo
             it[updatedAt] = LocalDateTime.now()

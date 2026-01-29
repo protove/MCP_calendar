@@ -7,5 +7,5 @@ data class User(
     val email: String,
     val password: String,
     val name: String,
-    val createdAt: LocalDataTime = LocalDataTime.now()
+    val createdAt: LocalDateTime = LocalDateTime.now()
 )

@@ -3,8 +3,11 @@ package com.mcp.calendar.repository
 import com.mcp.calendar.model.Event
 import com.mcp.calendar.model.EventCategory
 import com.mcp.calendar.model.table.EventTable
+import com.mcp.calendar.model.table.UserTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -37,8 +40,7 @@ class EventRepository {
     // ID로 일정 조회
     @Transactional(readOnly = true)
     fun findById(id: Long): Event? {
-        return EventTable.selectAll()
-            .where { EventTable.id eq id }
+        return EventTable.select { EventTable.id eq id }
             .map { rowToEvent(it) }
             .singleOrNull()
     }
@@ -46,8 +48,7 @@ class EventRepository {
     // 특정 사용자의 모든 일정 조회
     @Transactional(readOnly = true)
     fun findAllByUserId(userId: Long): List<Event> {
-        return EventTable.selectAll()
-            .where { EventTable.userId eq userId }
+        return EventTable.select { EventTable.userId eq userId }
             .orderBy(EventTable.startTime, SortOrder.ASC)
             .map { rowToEvent(it) }
     }
@@ -58,12 +59,11 @@ class EventRepository {
         val startOfMonth = LocalDateTime.of(year, month, 1, 0, 0, 0)
         val endOfMonth = startOfMonth.plusMonths(1)
 
-        return EventTable.selectAll()
-            .where {
-                (EventTable.userId eq userId) and
-                (EventTable.startTime greaterEq startOfMonth) and
-                (EventTable.startTime less endOfMonth)
-            }
+        return EventTable.select {
+            (EventTable.userId eq userId) and
+            (EventTable.startTime greaterEq startOfMonth) and
+            (EventTable.startTime less endOfMonth)
+        }
             .orderBy(EventTable.startTime, SortOrder.ASC)
             .map { rowToEvent(it) }
     }

@@ -2,7 +2,7 @@ package com.mcp.calendar.model.table
 
 import com.mcp.calendar.model.table.UserTable
 import org.jetbrains.exposed.dao.id.LongIdTable
-import org.jetbrains.exposed.sql.kotlin.datetime.datetime
+import org.jetbrains.exposed.sql.javatime.datetime
 
 object EventTable : LongIdTable("events") {
     val userId = reference("user_id", UserTable)

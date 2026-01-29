@@ -13,7 +13,7 @@ import javax.sql.DataSource
 
 
 @Configuration
-class DatabaseConfig(
+class ExposedDatabaseInitializer(
     private val dataSource: DataSource
 ){
     @EventListener(ApplicationReadyEvent::class)
