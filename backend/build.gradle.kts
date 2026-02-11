@@ -45,8 +45,8 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.3")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.3")
 
-    // Spring AI (Claude)
-    implementation("org.springframework.ai:spring-ai-anthropic-spring-boot-starter:1.0.0-M3")
+    // Gemini API (REST API 호출)
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
 
     // Logging
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")

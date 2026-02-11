@@ -10,6 +10,13 @@ spring:
       write-dates-as-timestamps: false
     time-zone: Asia/Seoul
 
+# Gemini API 설정
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+    model: gemini-2.5-pro
+    base-url: https://generativelanguage.googleapis.com/v1beta
+
 ---
 # Development Profile
 spring:
