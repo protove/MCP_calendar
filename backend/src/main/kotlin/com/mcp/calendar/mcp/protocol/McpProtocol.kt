@@ -1,8 +1,8 @@
 package com.mcp.calendar.mcp.protocol
 
-import com.faterxml.jackson.annotation.JsonIgnoreProperties
-import com.faterxml.jackson.annotation.JsonInclude
-import com.faterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
 
 
 // JSON-RPC 2.0 Base Types
@@ -92,7 +92,7 @@ data class ToolInfo(
 data class ListToolsResult(val tools: List<ToolInfo>)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class CallToolParmas(
+data class CallToolParams(
     val name: String,
     val arguments: Map<String, Any?>? = null
 )
