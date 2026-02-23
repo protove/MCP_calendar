@@ -17,6 +17,12 @@ gemini:
     model: gemini-2.5-pro
     base-url: https://generativelanguage.googleapis.com/v1beta
 
+# JWT 설정
+jwt:
+  secret: ${JWT_SECRET:myDefaultSecretKeyForDevelopment1234567890!@#$%^&*}
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION:1800000}    # 30분 (ms)
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7일 (ms)
+
 ---
 # Development Profile
 spring:
@@ -33,6 +39,11 @@ spring:
       maximum-pool-size: 10
       minimum-idle: 5
       connection-timeout: 30000
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
   jpa:
     show-sql: true
@@ -73,6 +84,12 @@ spring:
       maximum-pool-size: 20
       minimum-idle: 10
       connection-timeout: 30000
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
 
   jpa:
     show-sql: false

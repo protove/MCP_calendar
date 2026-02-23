@@ -45,6 +45,9 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.3")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.3")
 
+    // Redis (Refresh Token 저장)
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+
     // Gemini API (REST API 호출)
     implementation("org.springframework.boot:spring-boot-starter-webflux")
 

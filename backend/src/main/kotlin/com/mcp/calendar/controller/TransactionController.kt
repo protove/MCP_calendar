@@ -5,10 +5,12 @@ import com.mcp.calendar.dto.request.UpdateTransactionRequest
 import com.mcp.calendar.dto.response.ApiResponse
 import com.mcp.calendar.dto.response.TransactionResponse
 import com.mcp.calendar.dto.response.TransactionSummaryResponse
+import com.mcp.calendar.security.UserPrincipal
 import com.mcp.calendar.service.TransactionService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -20,10 +22,10 @@ class TransactionController(
     //POST /api/transactions - 거래 생성
     @PostMapping
     fun createTransaction(
-        @RequestHeader("X-User-Id") userId: Long,
+        @AuthenticationPrincipal principal: UserPrincipal,
         @Valid @RequestBody request: CreateTransactionRequest
     ): ResponseEntity<ApiResponse<TransactionResponse>> {
-        val createdTransaction = transactionService.createTransaction(userId, request)
+        val createdTransaction = transactionService.createTransaction(principal.id, request)
         return ResponseEntity
             .status(HttpStatus.CREATED)
             .body(ApiResponse.success(createdTransaction))
@@ -41,31 +43,31 @@ class TransactionController(
     //GET /api/transactions - 전체 거래 조회
     @GetMapping
     fun getAllTransactions(
-        @RequestHeader("X-User-Id") userId: Long
+        @AuthenticationPrincipal principal: UserPrincipal
     ): ResponseEntity<ApiResponse<List<TransactionResponse>>> {
-        val transactions = transactionService.getAllTransactions(userId)
+        val transactions = transactionService.getAllTransactions(principal.id)
         return ResponseEntity.ok(ApiResponse.success(transactions))
     }
 
     //GET /api/transactions/monthly?year=2026&month=1 - 월별 거래 조회
     @GetMapping("/monthly")
     fun getMonthlyTransactions(
-        @RequestHeader("X-User-Id") userId: Long,
+        @AuthenticationPrincipal principal: UserPrincipal,
         @RequestParam year: Int,
         @RequestParam month: Int
     ): ResponseEntity<ApiResponse<List<TransactionResponse>>> {
-        val transactions = transactionService.getMonthlyTransactions(userId, year, month)
+        val transactions = transactionService.getMonthlyTransactions(principal.id, year, month)
         return ResponseEntity.ok(ApiResponse.success(transactions))
     }
 
     //GET /api/transactions/summary?year=2026&month=1 - 월별 거래 요약 조회
     @GetMapping("/summary")
     fun getMonthlySummary(
-        @RequestHeader("X-User-Id") userId: Long,
+        @AuthenticationPrincipal principal: UserPrincipal,
         @RequestParam year: Int,
         @RequestParam month: Int
     ): ResponseEntity<ApiResponse<TransactionSummaryResponse>> {
-        val summary = transactionService.getMonthlySummary(userId, year, month)
+        val summary = transactionService.getMonthlySummary(principal.id, year, month)
         return ResponseEntity.ok(ApiResponse.success(summary))
     }
 
@@ -73,10 +75,10 @@ class TransactionController(
     @PutMapping("/{id}")
     fun updateTransaction(
         @PathVariable id: Long,
-        @RequestHeader("X-User-Id") userId: Long,
+        @AuthenticationPrincipal principal: UserPrincipal,
         @Valid @RequestBody request: UpdateTransactionRequest
     ): ResponseEntity<ApiResponse<TransactionResponse>> {
-        val updatedTransaction = transactionService.updateTransaction(id, userId, request)
+        val updatedTransaction = transactionService.updateTransaction(id, principal.id, request)
         return ResponseEntity.ok(ApiResponse.success(updatedTransaction))
     }
 
@@ -84,9 +86,9 @@ class TransactionController(
     @DeleteMapping("/{id}")
     fun deleteTransaction(
         @PathVariable id: Long,
-        @RequestHeader("X-User-Id") userId: Long
+        @AuthenticationPrincipal principal: UserPrincipal
     ): ResponseEntity<ApiResponse<Unit>> {
-        transactionService.deleteTransaction(id, userId)
+        transactionService.deleteTransaction(id, principal.id)
         return ResponseEntity.ok(ApiResponse.successNoContent())
     }
 }
