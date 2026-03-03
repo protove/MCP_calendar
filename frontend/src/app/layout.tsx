@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import { MainLayout } from "@/components/layout/MainLayout";
+import { AuthLayoutRouter } from "@/components/layout/AuthLayoutRouter";
 import "./globals.css";
 
 // Inter 폰트 설정
@@ -54,31 +54,13 @@ export default function RootLayout({
       <body
         className={`${inter.className} bg-cosmic-dark text-cosmic-white antialiased`}
       >
-        {/* 
-          LayoutRouter가 children의 경로를 감지하여
-          (auth) 그룹이면 MainLayout 없이 렌더링하고
-          그 외에는 MainLayout으로 감싸서 렌더링합니다.
-          
-          현재는 간단히 MainLayout으로 감싸는 형태입니다.
-          추후 인증 로직 추가 시 조건부 렌더링 필요.
+        {/* AuthLayoutRouter가 인증 상태와 경로를 확인하여
+          적절한 레이아웃을 적용합니다.
+          - /login, /register: MainLayout 없이 렌더링
+          - 나머지: 토큰 확인 → 인증되면 MainLayout, 아니면 /login 리다이렉트
         */}
-        <LayoutRouter>{children}</LayoutRouter>
+        <AuthLayoutRouter>{children}</AuthLayoutRouter>
       </body>
     </html>
   );
-}
-
-/**
- * 레이아웃 라우터 컴포넌트
- * 
- * 경로에 따라 다른 레이아웃을 적용합니다.
- * - /login, /register: 인증 레이아웃 (사이드바 없음)
- * - 그 외: 메인 레이아웃 (사이드바 있음)
- */
-function LayoutRouter({ children }: { children: React.ReactNode }) {
-  // 서버 컴포넌트에서는 현재 경로를 알 수 없으므로
-  // 클라이언트 컴포넌트에서 처리하거나
-  // 라우트 그룹의 layout.tsx에서 처리합니다.
-  // 여기서는 기본적으로 MainLayout을 적용합니다.
-  return <MainLayout>{children}</MainLayout>;
 }

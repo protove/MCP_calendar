@@ -15,6 +15,7 @@ import {
   Check,
   X
 } from 'lucide-react';
+import { authApi } from '@/lib/api';
 
 // ============================================
 // RegisterForm 컴포넌트
@@ -142,14 +143,14 @@ export default function RegisterForm() {
     setErrors({});
 
     try {
-      // TODO: 실제 회원가입 API 호출로 대체
-      // 데모를 위한 지연 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
+      await authApi.register(formData.name.trim(), formData.email, formData.password);
       // 회원가입 성공 시 로그인 페이지로 이동
       router.push('/login?registered=true');
-    } catch (error) {
-      setErrors({ general: '회원가입에 실패했습니다. 다시 시도해주세요.' });
+    } catch (error: any) {
+      const message = error.response?.data?.message
+        || error.response?.data?.error?.message
+        || '회원가입에 실패했습니다. 다시 시도해주세요.';
+      setErrors({ general: message });
     } finally {
       setIsLoading(false);
     }

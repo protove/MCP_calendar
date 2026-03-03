@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
+import { authApi, saveAuthData } from '@/lib/api';
 
 // ============================================
 // LoginForm 컴포넌트
@@ -79,14 +80,20 @@ export default function LoginForm() {
     setErrors({});
 
     try {
-      // TODO: 실제 로그인 API 호출로 대체
-      // 데모를 위한 지연 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await authApi.login(formData.email, formData.password);
+      const authData = response.data.data;
 
-      // 로그인 성공 시 대시보드로 이동
-      router.push('/');
-    } catch (error) {
-      setErrors({ general: '로그인에 실패했습니다. 다시 시도해주세요.' });
+      if (authData) {
+        saveAuthData(authData);
+        router.push('/');
+      } else {
+        setErrors({ general: '로그인 응답이 올바르지 않습니다.' });
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message
+        || error.response?.data?.error?.message
+        || '로그인에 실패했습니다. 다시 시도해주세요.';
+      setErrors({ general: message });
     } finally {
       setIsLoading(false);
     }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
@@ -15,6 +15,7 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { authApi, clearAuthData, getStoredUser } from "@/lib/api";
 
 // 네비게이션 메뉴 항목 정의
 const navigation = [
@@ -22,13 +23,6 @@ const navigation = [
   { name: "캘린더", href: "/calendar", icon: Calendar },
   { name: "가계부", href: "/ledger", icon: CreditCard },
 ];
-
-// 목업 사용자 데이터
-const mockUser = {
-  name: "홍길동",
-  email: "user@cosmic.space",
-  avatar: null, // 아바타 이미지 없음 - 이니셜 표시
-};
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -45,7 +39,24 @@ interface SidebarProps {
  */
 export function Sidebar({ isOpen = true, onToggle, isMobile = false }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+
+  useEffect(() => {
+    setUser(getStoredUser());
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // 토큰 만료 등 에러 무시
+    } finally {
+      clearAuthData();
+      router.push('/login');
+    }
+  };
 
   // 모바일에서는 항상 펼침 상태
   const collapsed = isMobile ? false : isCollapsed;
@@ -239,15 +250,7 @@ export function Sidebar({ isOpen = true, onToggle, isMobile = false }: SidebarPr
               {/* 아바타 */}
               <div className="relative flex-shrink-0">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cosmic-blue to-cosmic-light text-cosmic-white text-sm font-semibold">
-                  {mockUser.avatar ? (
-                    <img
-                      src={mockUser.avatar}
-                      alt={mockUser.name}
-                      className="h-full w-full rounded-full object-cover"
-                    />
-                  ) : (
-                    mockUser.name.charAt(0)
-                  )}
+                  {user?.name?.charAt(0) || <User className="h-4 w-4" />}
                 </div>
                 {/* 온라인 상태 표시 */}
                 <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-400 border-2 border-cosmic-dark" />
@@ -263,10 +266,10 @@ export function Sidebar({ isOpen = true, onToggle, isMobile = false }: SidebarPr
                     className="flex-1 min-w-0"
                   >
                     <p className="text-sm font-medium text-cosmic-white truncate">
-                      {mockUser.name}
+                      {user?.name || '사용자'}
                     </p>
                     <p className="text-xs text-cosmic-gray truncate">
-                      {mockUser.email}
+                      {user?.email || ''}
                     </p>
                   </motion.div>
                 )}
@@ -284,10 +287,7 @@ export function Sidebar({ isOpen = true, onToggle, isMobile = false }: SidebarPr
                 "transition-all duration-200",
                 collapsed ? "justify-center" : "gap-3"
               )}
-              onClick={() => {
-                // TODO: 로그아웃 로직 구현
-                console.log("로그아웃");
-              }}
+              onClick={handleLogout}
             >
               <LogOut className="h-5 w-5 flex-shrink-0" />
               <AnimatePresence mode="wait">

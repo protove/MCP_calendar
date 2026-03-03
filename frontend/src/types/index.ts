@@ -59,8 +59,15 @@ export interface Transaction {
 }
 
 export interface AuthResponse {
-  token: string;
-  user: User;
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  user: {
+    id: number;
+    email: string;
+    name: string;
+    role: string;
+  };
 }
 
 /* ============================================
@@ -113,41 +120,3 @@ export interface ChatStreamEvent {
   conversationId?: string;
 }
 
-/* ========== Chat Types ========== */
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  toolsUsed?: string[];
-  functionCallCount?: number;
-  isError?: boolean;
-}
-
-export interface ChatRequest {
-  message: string;
-  conversationId?: string;
-}
-
-export interface ChatResponse {
-  message: string;
-  conversationId: string;
-  timestamp: string;
-  toolsUsed?: string[];
-  functionCallCount?: number;
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: { code: string; message: string };
-  timestamp: string;
-}
-
-export interface ChatStreamEvent {
-  type: 'thinking' | 'tool_call' | 'tool_result' | 'content' | 'done' | 'error';
-  data: string;
-  toolName?: string;
-  conversationId?: string;
-}
