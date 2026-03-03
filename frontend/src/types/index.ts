@@ -62,3 +62,92 @@ export interface AuthResponse {
   token: string;
   user: User;
 }
+
+/* ============================================
+   채팅 관련 타입
+   ============================================ */
+
+/* 채팅 메시지 */
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  toolsUsed?: string[];
+  functionCallCount?: number;
+  isError?: boolean;
+  isStreaming?: boolean;
+}
+
+/* 채팅 요청 */
+export interface ChatRequest {
+  message: string;
+  conversationId?: string;
+}
+
+/* 채팅 응답 */
+export interface ChatResponse {
+  message: string;
+  conversationId: string;
+  timestamp: string;
+  toolsUsed?: string[];
+  functionCallCount?: number;
+}
+
+/* API 공통 응답 래퍼 */
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+  };
+  timestamp: string;
+}
+
+/* SSE 스트리밍 이벤트 */
+export interface ChatStreamEvent {
+  type: 'thinking' | 'tool_call' | 'tool_result' | 'content' | 'done' | 'error';
+  data: string;
+  toolName?: string;
+  conversationId?: string;
+}
+
+/* ========== Chat Types ========== */
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  toolsUsed?: string[];
+  functionCallCount?: number;
+  isError?: boolean;
+}
+
+export interface ChatRequest {
+  message: string;
+  conversationId?: string;
+}
+
+export interface ChatResponse {
+  message: string;
+  conversationId: string;
+  timestamp: string;
+  toolsUsed?: string[];
+  functionCallCount?: number;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: { code: string; message: string };
+  timestamp: string;
+}
+
+export interface ChatStreamEvent {
+  type: 'thinking' | 'tool_call' | 'tool_result' | 'content' | 'done' | 'error';
+  data: string;
+  toolName?: string;
+  conversationId?: string;
+}

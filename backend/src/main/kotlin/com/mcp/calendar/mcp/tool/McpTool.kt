@@ -13,7 +13,8 @@ interface McpTool {
     val name: String
     val description: String
     val inputSchema: Map<String, Any?>
-    fun execute(arguments: Map<String, Any?>): CallToolResult
+    fun execute(arguments: Map<String, Any?>, userId: Long): CallToolResult
+    fun execute(arguments: Map<String, Any?>): CallToolResult = execute(arguments, 1L)
     fun toToolInfo(): ToolInfo = ToolInfo(name, description, inputSchema)
 }
 

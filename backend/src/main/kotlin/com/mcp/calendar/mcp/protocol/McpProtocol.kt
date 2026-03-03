@@ -131,4 +131,6 @@ object McpConstants {
     const val SERVER_VERSION = "1.0.0"
 }
 
+typealias JsonRpcRequest = JsonRequest
+
 

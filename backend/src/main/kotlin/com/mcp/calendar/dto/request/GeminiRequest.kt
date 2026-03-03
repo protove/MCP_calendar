@@ -1,13 +1,17 @@
 package com.mcp.calendar.dto.request
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class GeminiRequest(
     val contents: List<GeminiContent>,
     val generationConfig: GenerationConfig? = null,
     val safetySettings: List<SafetySetting>? = null,
-    val systemInstructions: GeminiContent? = null
+    @JsonProperty("system_instruction")
+    val systemInstruction: GeminiContent? = null,
+    val tools: List<GeminiTool>? = null,
+    val toolConfig: GeminiToolConfig? = null
 ){
     companion object {
         fun of(message: String, config: GenerationConfig? = null): GeminiRequest {
@@ -36,16 +40,69 @@ data class GeminiRequest(
             )
             return GeminiRequest(contents = contents, generationConfig = config)
         }
+
+        fun withTools(
+            contents: List<GeminiContent>,
+            tools: List<GeminiTool>,
+            systemInstruction: GeminiContent? = null,
+            config: GenerationConfig? = null
+        ): GeminiRequest {
+            return GeminiRequest(
+                contents = contents,
+                tools = tools,
+                toolConfig = GeminiToolConfig(),
+                systemInstruction = systemInstruction,
+                generationConfig = config
+            )
+        }
     }
 }
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class GeminiContent(
     val role: String?,
     val parts: List<GeminiPart>?
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class GeminiPart(
-    val text: String?
+    val text: String? = null,
+    val functionCall: FunctionCall? = null,
+    val functionResponse: FunctionResponse? = null
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class FunctionCall(
+    val name: String,
+    val args: Map<String, Any?> = emptyMap()
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class FunctionResponse(
+    val name: String,
+    val response: Map<String, Any?>
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class GeminiTool(
+    val functionDeclarations: List<GeminiFunctionDeclaration>
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class GeminiFunctionDeclaration(
+    val name: String,
+    val description: String,
+    val parameters: Map<String, Any?>
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class GeminiToolConfig(
+    val functionCallingConfig: FunctionCallingConfig = FunctionCallingConfig()
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class FunctionCallingConfig(
+    val mode: String = "AUTO"
 )
 
 @JsonInclude(JsonInclude.Include.NON_NULL)

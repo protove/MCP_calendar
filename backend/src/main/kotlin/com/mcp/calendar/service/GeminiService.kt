@@ -87,7 +87,9 @@ class GeminiService(
             .bodyValue(request)
             .retrieve()
             .bodyToFlux(GeminiStreamChunk::class.java)
-            .mapNotNull { chunk -> chunk.getText() }
+            .map { chunk -> chunk.getText() }
+            .filter { it != null }
+            .map { it!! }
             .doOnSubscribe {
                 logger.debug { "Stream subscribed for conversation: $convId" }
             }
@@ -110,6 +112,38 @@ class GeminiService(
         return generateContent("ping", config = GenerationConfig(maxOutputTokens = 10))
             .map { true }
             .onErrorReturn(false)
+    }
+
+    fun generateContentRaw(request: GeminiRequest): Mono<GeminiResponse> {
+        logger.info { "Generating raw content with tools" }
+
+        if (!geminiProperties.isConfigured()) {
+            logger.error { "Gemini API is not configured" }
+            return Mono.error(GeminiConfigurationException("Gemini API Key가 설정되지 않았습니다."))
+        }
+
+        return geminiWebClient.post()
+            .uri(geminiProperties.getGenerateContentUrl())
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .retrieve()
+            .bodyToMono(GeminiResponse::class.java)
+            .doOnSuccess { response ->
+                logger.debug { "Raw response received - hasFunctionCall: ${response.hasFunctionCall()}" }
+                response.usageMetadata?.let { usage ->
+                    logger.debug {
+                        "Token usage - Prompt: ${usage.promptTokenCount}, " +
+                        "Response: ${usage.candidatesTokenCount}, " +
+                        "Total: ${usage.totalTokenCount}"
+                    }
+                }
+            }
+            .doOnError { error ->
+                logger.error(error) { "Failed to generate raw content: ${error.message}" }
+            }
+            .onErrorMap { error ->
+                mapToServiceException(error)
+            }
     }
 
     private fun generateConversationId(): String {

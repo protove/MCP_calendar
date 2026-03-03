@@ -1,35 +1,33 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Bot, User, Sparkles, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { X, Send, Bot, User, Sparkles, Loader2, RotateCcw, Wrench, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { streamChat } from "@/lib/api";
+import type { ChatMessage, ChatStreamEvent } from "@/types";
 
 interface ChatInterfaceProps {
   onClose: () => void;
-}
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
 }
 
 /**
  * AI 어시스턴트 채팅 인터페이스
  * 
  * 우주/별자리 테마가 적용된 채팅 패널
+ * - 실제 백엔드 API 연결 (SSE 스트리밍 + Function Calling)
+ * - 대화 세션(conversationId) 관리
+ * - 도구 사용 표시
+ * - 에러 처리 및 재시도
  * - 글래스모피즘 디자인
  * - 메시지 버블 애니메이션
  * - 타이핑 인디케이터
  * - 자동 스크롤
  */
 export function ChatInterface({ onClose }: ChatInterfaceProps) {
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      id: "1",
+      id: "welcome",
       role: "assistant",
       content:
         "안녕하세요! 저는 MCP 캘린더 AI 어시스턴트입니다. 일정 관리와 가계부 기록을 도와드릴게요. '내일 오후 2시에 미팅 추가해줘' 또는 '커피 5000원 지출 기록해줘'라고 말씀해보세요! ✨",
@@ -37,25 +35,53 @@ export function ChatInterface({ onClose }: ChatInterfaceProps) {
     },
   ]);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
+  const [streamingContent, setStreamingContent] = useState("");
+  const [activeTools, setActiveTools] = useState<string[]>([]);
+  const [thinkingMessage, setThinkingMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // 메시지 추가 시 자동 스크롤
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, streamingContent, thinkingMessage]);
 
   // 입력창 포커스
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  // 컴포넌트 언마운트 시 스트리밍 중단
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  // 인증 확인
+  const isAuthenticated = useCallback(() => {
+    return typeof window !== 'undefined' && !!localStorage.getItem('token');
+  }, []);
+
   // 메시지 전송 핸들러
   const handleSend = async () => {
-    if (!input.trim() || isTyping) return;
+    if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = {
+    if (!isAuthenticated()) {
+      setMessages((prev) => [...prev, {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: "로그인이 필요합니다. 먼저 로그인해주세요.",
+        timestamp: new Date(),
+        isError: true,
+      }]);
+      return;
+    }
+
+    const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
       content: input,
@@ -63,35 +89,113 @@ export function ChatInterface({ onClose }: ChatInterfaceProps) {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput("");
-    setIsTyping(true);
+    setIsLoading(true);
+    setStreamingContent("");
+    setActiveTools([]);
+    setThinkingMessage(null);
 
-    // Mock AI 응답 (실제로는 API 호출)
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: generateMockResponse(input),
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiResponse]);
-      setIsTyping(false);
-    }, 1500);
+    // SSE 스트리밍으로 전송
+    const toolsUsed: string[] = [];
+    let fullContent = "";
+    let receivedConversationId: string | undefined;
+
+    abortControllerRef.current = streamChat(
+      { message: currentInput, conversationId },
+      // onEvent
+      (event: ChatStreamEvent) => {
+        switch (event.type) {
+          case "thinking":
+            setThinkingMessage(event.data);
+            break;
+          case "tool_call":
+            if (event.toolName) {
+              toolsUsed.push(event.toolName);
+              setActiveTools([...toolsUsed]);
+            }
+            setThinkingMessage(event.data);
+            break;
+          case "tool_result":
+            setThinkingMessage(null);
+            break;
+          case "content":
+            setThinkingMessage(null);
+            fullContent += event.data;
+            setStreamingContent(fullContent);
+            break;
+          case "done":
+            if (event.conversationId) {
+              receivedConversationId = event.conversationId;
+            }
+            break;
+          case "error":
+            setThinkingMessage(null);
+            setStreamingContent("");
+            setMessages((prev) => [...prev, {
+              id: (Date.now() + 1).toString(),
+              role: "assistant",
+              content: event.data,
+              timestamp: new Date(),
+              isError: true,
+            }]);
+            setIsLoading(false);
+            break;
+        }
+      },
+      // onError
+      (error: Error) => {
+        setThinkingMessage(null);
+        setStreamingContent("");
+        setIsLoading(false);
+        setMessages((prev) => [...prev, {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: `연결 오류: ${error.message}`,
+          timestamp: new Date(),
+          isError: true,
+        }]);
+      },
+      // onDone
+      () => {
+        setThinkingMessage(null);
+        setIsLoading(false);
+
+        if (receivedConversationId) {
+          setConversationId(receivedConversationId);
+        }
+
+        if (fullContent) {
+          setMessages((prev) => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: fullContent,
+            timestamp: new Date(),
+            toolsUsed: toolsUsed.length > 0 ? [...toolsUsed] : undefined,
+            functionCallCount: toolsUsed.length > 0 ? toolsUsed.length : undefined,
+          }]);
+          setStreamingContent("");
+          setActiveTools([]);
+        }
+      }
+    );
   };
 
-  // Mock 응답 생성
-  const generateMockResponse = (userInput: string): string => {
-    const lowerInput = userInput.toLowerCase();
-    if (lowerInput.includes("일정") || lowerInput.includes("미팅")) {
-      return "일정을 확인했어요! 📅 캘린더에 추가할까요? 정확한 시간과 제목을 알려주시면 바로 등록해 드릴게요.";
-    }
-    if (lowerInput.includes("지출") || lowerInput.includes("원")) {
-      return "지출 내역을 기록했어요! 💰 가계부에서 확인하실 수 있습니다. 다른 기록할 내용이 있으신가요?";
-    }
-    if (lowerInput.includes("안녕")) {
-      return "반갑습니다! 오늘 하루도 빛나는 하루 되세요 ✨ 무엇을 도와드릴까요?";
-    }
-    return `'${userInput}'에 대해 이해했어요. 더 자세히 알려주시면 더 정확하게 도움을 드릴 수 있어요! 🚀`;
+  // 새 대화 시작
+  const handleNewConversation = () => {
+    abortControllerRef.current?.abort();
+    setConversationId(undefined);
+    setMessages([{
+      id: "welcome",
+      role: "assistant",
+      content: "새 대화를 시작합니다! 무엇을 도와드릴까요? ✨",
+      timestamp: new Date(),
+    }]);
+    setStreamingContent("");
+    setActiveTools([]);
+    setThinkingMessage(null);
+    setIsLoading(false);
+    setInput("");
   };
 
   // 엔터 키 핸들러
@@ -125,18 +229,33 @@ export function ChatInterface({ onClose }: ChatInterfaceProps) {
           </motion.div>
           <div>
             <h2 className="text-base font-semibold text-cosmic-white">AI 어시스턴트</h2>
-            <p className="text-xs text-cosmic-gray">항상 도움 준비 완료</p>
+            <p className="text-xs text-cosmic-gray">
+              {conversationId ? "대화 진행 중" : "새 대화"}
+            </p>
           </div>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.1, rotate: 90 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-cosmic-light/10 text-cosmic-gray hover:bg-cosmic-red/20 hover:text-cosmic-red transition-colors"
-          aria-label="채팅 닫기"
-        >
-          <X className="h-4 w-4" />
-        </motion.button>
+        <div className="flex items-center gap-1">
+          {/* 새 대화 버튼 */}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleNewConversation}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-cosmic-light/10 text-cosmic-gray hover:bg-cosmic-blue/20 hover:text-cosmic-light transition-colors"
+            aria-label="새 대화"
+            title="새 대화 시작"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-cosmic-light/10 text-cosmic-gray hover:bg-cosmic-red/20 hover:text-cosmic-red transition-colors"
+            aria-label="채팅 닫기"
+          >
+            <X className="h-4 w-4" />
+          </motion.button>
+        </div>
       </div>
 
       {/* 메시지 목록 */}
@@ -147,9 +266,70 @@ export function ChatInterface({ onClose }: ChatInterfaceProps) {
           ))}
         </AnimatePresence>
 
-        {/* 타이핑 인디케이터 */}
+        {/* 활성 도구 표시 */}
         <AnimatePresence>
-          {isTyping && (
+          {activeTools.length > 0 && isLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex flex-wrap gap-1.5 px-10"
+            >
+              {activeTools.map((tool, i) => (
+                <span
+                  key={`${tool}-${i}`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-cosmic-gold/15 text-cosmic-gold border border-cosmic-gold/20"
+                >
+                  <Wrench className="h-3 w-3" />
+                  {tool}
+                </span>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* 스트리밍 중인 콘텐츠 */}
+        <AnimatePresence>
+          {streamingContent && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex gap-2 flex-row"
+            >
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cosmic-blue/30 to-cosmic-light/30">
+                <Bot className="h-4 w-4 text-cosmic-light" />
+              </div>
+              <div className="max-w-[80%] rounded-2xl px-4 py-2.5 bg-cosmic-light/10 text-cosmic-white border border-cosmic-light/10 rounded-bl-md">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{streamingContent}</p>
+                <span className="inline-block w-1.5 h-4 ml-0.5 bg-cosmic-light/60 animate-pulse" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Thinking 인디케이터 */}
+        <AnimatePresence>
+          {thinkingMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-center gap-2 text-cosmic-gray"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cosmic-blue/30 to-cosmic-light/30">
+                <Bot className="h-4 w-4 text-cosmic-light" />
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-cosmic-light/10">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-cosmic-light" />
+                <span className="text-xs text-cosmic-gray">{thinkingMessage}</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* 타이핑 인디케이터 (thinking 없을 때만) */}
+        <AnimatePresence>
+          {isLoading && !thinkingMessage && !streamingContent && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -181,7 +361,7 @@ export function ChatInterface({ onClose }: ChatInterfaceProps) {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="메시지를 입력하세요..."
-              disabled={isTyping}
+              disabled={isLoading}
               className={cn(
                 "w-full rounded-xl px-4 py-3",
                 "bg-cosmic-light/5 border border-cosmic-light/20",
@@ -198,7 +378,7 @@ export function ChatInterface({ onClose }: ChatInterfaceProps) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleSend}
-            disabled={!input.trim() || isTyping}
+            disabled={!input.trim() || isLoading}
             className={cn(
               "flex h-12 w-12 items-center justify-center",
               "rounded-xl",
@@ -210,7 +390,7 @@ export function ChatInterface({ onClose }: ChatInterfaceProps) {
             )}
             aria-label="전송"
           >
-            {isTyping ? (
+            {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <Send className="h-5 w-5" />
@@ -229,7 +409,7 @@ export function ChatInterface({ onClose }: ChatInterfaceProps) {
  * 메시지 버블 컴포넌트
  */
 interface MessageBubbleProps {
-  message: Message;
+  message: ChatMessage;
   index: number;
 }
 
@@ -251,34 +431,62 @@ function MessageBubble({ message, index }: MessageBubbleProps) {
           "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full",
           isUser
             ? "bg-gradient-to-br from-cosmic-gold/30 to-cosmic-gold/10"
-            : "bg-gradient-to-br from-cosmic-blue/30 to-cosmic-light/30"
+            : message.isError
+              ? "bg-gradient-to-br from-cosmic-red/30 to-cosmic-red/10"
+              : "bg-gradient-to-br from-cosmic-blue/30 to-cosmic-light/30"
         )}
       >
         {isUser ? (
           <User className="h-4 w-4 text-cosmic-gold" />
+        ) : message.isError ? (
+          <AlertCircle className="h-4 w-4 text-cosmic-red" />
         ) : (
           <Bot className="h-4 w-4 text-cosmic-light" />
         )}
       </div>
 
       {/* 메시지 내용 */}
-      <div
-        className={cn(
-          "max-w-[80%] rounded-2xl px-4 py-2.5",
-          isUser
-            ? "bg-gradient-to-br from-cosmic-blue to-cosmic-blue/80 text-cosmic-white rounded-br-md"
-            : "bg-cosmic-light/10 text-cosmic-white border border-cosmic-light/10 rounded-bl-md"
-        )}
-      >
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-        <p
+      <div className="max-w-[80%] space-y-1">
+        <div
           className={cn(
-            "mt-1 text-xs",
-            isUser ? "text-cosmic-light/60 text-right" : "text-cosmic-gray/50"
+            "rounded-2xl px-4 py-2.5",
+            isUser
+              ? "bg-gradient-to-br from-cosmic-blue to-cosmic-blue/80 text-cosmic-white rounded-br-md"
+              : message.isError
+                ? "bg-cosmic-red/10 text-cosmic-red border border-cosmic-red/20 rounded-bl-md"
+                : "bg-cosmic-light/10 text-cosmic-white border border-cosmic-light/10 rounded-bl-md"
           )}
         >
-          {formatTime(message.timestamp)}
-        </p>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+          <p
+            className={cn(
+              "mt-1 text-xs",
+              isUser ? "text-cosmic-light/60 text-right" : "text-cosmic-gray/50"
+            )}
+          >
+            {formatTime(message.timestamp)}
+          </p>
+        </div>
+
+        {/* 도구 사용 배지 */}
+        {message.toolsUsed && message.toolsUsed.length > 0 && (
+          <div className="flex flex-wrap gap-1 px-1">
+            {message.toolsUsed.map((tool, i) => (
+              <span
+                key={`${tool}-${i}`}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-cosmic-gold/10 text-cosmic-gold/80 border border-cosmic-gold/15"
+              >
+                <Wrench className="h-2.5 w-2.5" />
+                {tool}
+              </span>
+            ))}
+            {message.functionCallCount && (
+              <span className="text-[10px] text-cosmic-gray/50 self-center ml-1">
+                {message.functionCallCount}회 호출
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );

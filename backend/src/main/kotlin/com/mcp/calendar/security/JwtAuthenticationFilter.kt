@@ -68,7 +68,7 @@ class JwtAuthenticationFilter(
                 }
             }
         } catch (e: Exception) {
-            logger.error(e) { "JWT 인증 처리 중 오류 발생" }
+            logger.error { "JWT 인증 처리 중 오류 발생: ${e.message}" }
         }
 
         filterChain.doFilter(request, response)

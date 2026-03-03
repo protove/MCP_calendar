@@ -1,6 +1,7 @@
 package com.mcp.calendar.dto.response
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.mcp.calendar.dto.request.FunctionCall
 import com.mcp.calendar.dto.request.GeminiContent
 import com.mcp.calendar.dto.request.GeminiPart
 
@@ -29,6 +30,19 @@ data class GeminiResponse(
     fun getBlockReason(): String? {
         return promptFeedback?.blockReason
             ?: if(candidates?.firstOrNull()?.finishReason == "SAFETY") "SAFETY" else null
+    }
+
+    fun hasFunctionCall(): Boolean {
+        return candidates?.firstOrNull()
+            ?.content?.parts
+            ?.any { it.functionCall != null } == true
+    }
+
+    fun getFunctionCall(): FunctionCall? {
+        return candidates?.firstOrNull()
+            ?.content?.parts
+            ?.firstOrNull { it.functionCall != null }
+            ?.functionCall
     }
 }
 

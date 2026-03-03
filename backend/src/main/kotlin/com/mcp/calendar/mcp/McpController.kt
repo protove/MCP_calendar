@@ -26,7 +26,8 @@ private val logger = KotlinLogging.logger {}
 class McpController(
     private val sessionManager: McpSessionManager,
     private val requestHandler: McpRequestHandler,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val toolRegistry: McpToolRegistry
 ) {
 
     @GetMapping("/sse", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
@@ -80,7 +81,7 @@ class McpController(
         "server" to "mcp-calendar-server",
         "version" to "1.0.0",
         "activeSessions" to sessionManager.activeSessionCount(),
-        "registeredTools" to "15"
+        "registeredTools" to toolRegistry.size()
     ))
 
     private fun sendSseResponse(session: McpSession, response: JsonRpcResponse) {

@@ -28,24 +28,21 @@ class UserRepository {
 
     @Transactional(readOnly = true)
     fun findById(id: Long): User? {
-        return UserTable.selectAll()
-            .where { UserTable.id eq id }
+        return UserTable.select { UserTable.id eq id }
             .map { toUser(it) }
             .singleOrNull()
     }
 
     @Transactional(readOnly = true)
     fun findByEmail(email: String): User? {
-        return UserTable.selectAll()
-            .where { UserTable.email eq email }
+        return UserTable.select { UserTable.email eq email }
             .map { toUser(it) }
             .singleOrNull()
     }
 
     @Transactional(readOnly = true)
     fun existsByEmail(email: String): Boolean {
-        return UserTable.selectAll()
-            .where { UserTable.email eq email }
+        return UserTable.select { UserTable.email eq email }
             .count() > 0
     }
 

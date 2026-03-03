@@ -12,8 +12,6 @@ private val logger = KotlinLogging.logger {}
 @Component
 class CalendarTools(private val eventService: EventService) {
 
-    private val defaultUserId = 1L  // Phase 2에서 인증 연동 예정
-
     fun getTools(): List<McpTool> = listOf(
         CreateEventTool(), GetEventTool(), ListEventsTool(),
         GetMonthlyEventsTool(), UpdateEventTool(), DeleteEventTool()
@@ -36,7 +34,7 @@ class CalendarTools(private val eventService: EventService) {
             required = listOf("title", "startTime", "endTime")
         )
 
-        override fun execute(arguments: Map<String, Any?>): CallToolResult {
+        override fun execute(arguments: Map<String, Any?>, userId: Long): CallToolResult {
             logger.info { "MCP create_event: ${arguments["title"]}" }
             val request = CreateEventRequest(
                 title = arguments.requireString("title"),
@@ -47,7 +45,7 @@ class CalendarTools(private val eventService: EventService) {
                 category = arguments.getString("category") ?: "other",
                 allDay = arguments.getBoolean("allDay") ?: false
             )
-            val result = eventService.createEvent(defaultUserId, request)
+            val result = eventService.createEvent(userId, request)
             return CallToolResult.text(buildString {
                 appendLine("✅ 일정이 생성되었습니다.")
                 appendLine("• ID: ${result.id}")
@@ -70,7 +68,7 @@ class CalendarTools(private val eventService: EventService) {
             properties = mapOf("eventId" to numberProperty("일정 ID (필수)", "integer")),
             required = listOf("eventId")
         )
-        override fun execute(arguments: Map<String, Any?>): CallToolResult {
+        override fun execute(arguments: Map<String, Any?>, userId: Long): CallToolResult {
             val eventId = arguments.requireLong("eventId")
             logger.info { "MCP get_event: $eventId" }
             val event = eventService.getEvent(eventId)
@@ -90,9 +88,9 @@ class CalendarTools(private val eventService: EventService) {
         override val name = "list_events"
         override val description = "사용자의 전체 일정 목록을 조회합니다."
         override val inputSchema = objectSchema(properties = emptyMap())
-        override fun execute(arguments: Map<String, Any?>): CallToolResult {
+        override fun execute(arguments: Map<String, Any?>, userId: Long): CallToolResult {
             logger.info { "MCP list_events" }
-            val events = eventService.getAllEvents(defaultUserId)
+            val events = eventService.getAllEvents(userId)
             if (events.isEmpty()) return CallToolResult.text("📅 등록된 일정이 없습니다.")
             return CallToolResult.text(buildString {
                 appendLine("📅 전체 일정 (${events.size}건)")
@@ -114,12 +112,12 @@ class CalendarTools(private val eventService: EventService) {
             ),
             required = listOf("year", "month")
         )
-        override fun execute(arguments: Map<String, Any?>): CallToolResult {
+        override fun execute(arguments: Map<String, Any?>, userId: Long): CallToolResult {
             val year = arguments.requireInt("year")
             val month = arguments.requireInt("month")
             require(month in 1..12) { "월은 1~12 사이여야 합니다." }
             logger.info { "MCP get_monthly_events: $year-$month" }
-            val events = eventService.getMonthlyEvents(defaultUserId, year, month)
+            val events = eventService.getMonthlyEvents(userId, year, month)
             if (events.isEmpty()) return CallToolResult.text("📅 ${year}년 ${month}월 일정이 없습니다.")
             return CallToolResult.text(buildString {
                 appendLine("📅 ${year}년 ${month}월 일정 (${events.size}건)")
@@ -147,7 +145,7 @@ class CalendarTools(private val eventService: EventService) {
             ),
             required = listOf("eventId")
         )
-        override fun execute(arguments: Map<String, Any?>): CallToolResult {
+        override fun execute(arguments: Map<String, Any?>, userId: Long): CallToolResult {
             val eventId = arguments.requireLong("eventId")
             logger.info { "MCP update_event: $eventId" }
             val request = UpdateEventRequest(
@@ -159,7 +157,7 @@ class CalendarTools(private val eventService: EventService) {
                 category = arguments.getString("category"),
                 allDay = arguments.getBoolean("allDay")
             )
-            val result = eventService.updateEvent(eventId, defaultUserId, request)
+            val result = eventService.updateEvent(eventId, userId, request)
             return CallToolResult.text(buildString {
                 appendLine("✏️ 일정이 수정되었습니다.")
                 appendLine("• ID: ${result.id} | 제목: ${result.title}")
@@ -177,10 +175,10 @@ class CalendarTools(private val eventService: EventService) {
             properties = mapOf("eventId" to numberProperty("일정 ID (필수)", "integer")),
             required = listOf("eventId")
         )
-        override fun execute(arguments: Map<String, Any?>): CallToolResult {
+        override fun execute(arguments: Map<String, Any?>, userId: Long): CallToolResult {
             val eventId = arguments.requireLong("eventId")
             logger.info { "MCP delete_event: $eventId" }
-            eventService.deleteEvent(eventId, defaultUserId)
+            eventService.deleteEvent(eventId, userId)
             return CallToolResult.text("🗑️ 일정(ID: $eventId)이 삭제되었습니다.")
         }
     }

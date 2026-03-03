@@ -14,13 +14,10 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
-/**
- * Spring Security 설정
- *
- * - JWT 기반 Stateless 인증
- * - 인증 불필요: /api/auth/register, /api/auth/login, /api/auth/refresh, /mcp/**, /api/chat/health
- * - 인증 필요: /api/events/**, /api/transactions/**, /api/chat/**, /api/auth/logout, /api/users/**
- */
+// Spring Security 설정
+// - JWT 기반 Stateless 인증
+// - 인증 불필요: /api/auth/register, /api/auth/login, /api/auth/refresh, /mcp, /api/chat/health
+// - 인증 필요: /api/events, /api/transactions, /api/chat, /api/auth/logout, /api/users
 @Configuration
 @EnableWebSecurity
 class SecurityConfig(
@@ -52,10 +49,9 @@ class SecurityConfig(
         return http.build()
     }
 
-    /**
-     * CORS 설정
-     * ⚠️ 프로덕션에서는 allowedOriginPatterns를 특정 도메인으로 제한해야 합니다.
-     */
+    // CORS 설정 - 프로덕션에서는 allowedOriginPatterns를 특정 도메인으로 제한 필요
+    @Bean
+    fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
         configuration.allowedOriginPatterns = listOf("*")
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
