@@ -38,6 +38,7 @@ class SecurityConfig(
                     // 인증 불필요 엔드포인트
                     .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh").permitAll()
                     .requestMatchers("/mcp/**").permitAll()
+                    .requestMatchers("/api/weather/**").permitAll()
                     .requestMatchers("/api/chat/health").permitAll()
                     // 나머지 /api/** 는 인증 필요
                     .requestMatchers("/api/**").authenticated()

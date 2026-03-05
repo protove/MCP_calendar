@@ -74,7 +74,7 @@ data class GeminiPart(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class FunctionCall(
     val name: String,
-    val args: Map<String, Any?> = emptyMap()
+    val args: Map<String, Any?>? = null
 )
 
 @JsonInclude(JsonInclude.Include.NON_NULL)

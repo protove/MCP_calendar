@@ -18,7 +18,8 @@ class GeminiFunctionAdapter(
     private val toolRegistry: McpToolRegistry
 ) {
 
-    fun getGeminiTools(): List<GeminiTool> {
+    // 도구 목록은 런타임에 변경되지 않으므로 캐싱
+    private val cachedTools: List<GeminiTool> by lazy {
         val declarations = toolRegistry.listTools().map { toolInfo ->
             GeminiFunctionDeclaration(
                 name = toolInfo.name,
@@ -26,7 +27,9 @@ class GeminiFunctionAdapter(
                 parameters = toolInfo.inputSchema
             )
         }
-        logger.debug { "Gemini 도구 변환 완료: ${declarations.size}개" }
-        return listOf(GeminiTool(functionDeclarations = declarations))
+        logger.info { "Gemini 도구 변환 완료 (캐싱됨): ${declarations.size}개" }
+        listOf(GeminiTool(functionDeclarations = declarations))
     }
+
+    fun getGeminiTools(): List<GeminiTool> = cachedTools
 }

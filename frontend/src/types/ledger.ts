@@ -201,3 +201,42 @@ export const getCategoryLabel = (category: TransactionCategory): string => {
 export const getCategoryIcon = (category: TransactionCategory): string => {
   return CATEGORY_INFO[category]?.icon || '📦';
 };
+
+/* ============================================
+   백엔드 API 응답 타입 (TransactionController 매핑)
+   ============================================ */
+
+/* 거래 타입 (백엔드 enum 매핑) */
+export type TransactionType = 'INCOME' | 'EXPENSE';
+
+/* 백엔드 TransactionResponse DTO */
+export interface TransactionResponse {
+  id: number;
+  type: TransactionType;
+  category: TransactionCategory;
+  amount: number;
+  description: string | null;
+  date: string;
+  memo: string | null;
+  createdAt: string;
+  updatedAt: string;
+  isIncome: boolean;
+}
+
+/* 백엔드 TransactionSummaryResponse DTO */
+export interface TransactionSummaryResponse {
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  transactionCount: number;
+}
+
+/* 백엔드 CreateTransactionRequest DTO */
+export interface CreateTransactionRequest {
+  type: TransactionType;
+  category: TransactionCategory;
+  amount: number;
+  description?: string;
+  date: string;
+  memo?: string;
+}

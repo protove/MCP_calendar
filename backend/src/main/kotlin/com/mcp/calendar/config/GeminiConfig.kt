@@ -29,6 +29,7 @@ class GeminiConfig(
         return WebClient.builder()
             .baseUrl(geminiProperties.baseUrl)
             .defaultHeader("Content-Type", "application/json")
+            .defaultHeader("x-goog-api-key", geminiProperties.key)
             .codecs { configurer ->
                 configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024)
             }

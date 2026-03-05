@@ -26,16 +26,24 @@ fun Map<String, Any?>.requireString(key: String): String =
     getString(key) ?: throw IllegalArgumentException("필수 파라미터 '$key'가 누락되었습니다.")
 
 fun Map<String, Any?>.getLong(key: String): Long? =
-    (this[key] as? Number)?.toLong()
+    when (val v = this[key]) {
+        is Number -> v.toLong()
+        is String -> v.toLongOrNull()
+        else -> null
+    }
 
 fun Map<String, Any?>.requireLong(key: String): Long =
-    getLong(key) ?: throw IllegalArgumentException("필수 파라미터 '$key'가 누락되었습니다.")
+    getLong(key) ?: throw IllegalArgumentException("필수 파라미터 '$key'가 누락되었거나 숫자가 아닙니다.")
 
 fun Map<String, Any?>.getInt(key: String): Int? =
-    (this[key] as? Number)?.toInt()
+    when (val v = this[key]) {
+        is Number -> v.toInt()
+        is String -> v.toIntOrNull()
+        else -> null
+    }
 
 fun Map<String, Any?>.requireInt(key: String): Int =
-    getInt(key) ?: throw IllegalArgumentException("필수 파라미터 '$key'가 누락되었습니다.")
+    getInt(key) ?: throw IllegalArgumentException("필수 파라미터 '$key'가 누락되었거나 숫자가 아닙니다.")
 
 fun Map<String, Any?>.getBigDecimal(key: String): BigDecimal? =
     this[key]?.let { BigDecimal(it.toString()) }
@@ -87,23 +95,26 @@ fun stringProperty(
     enum: List<String>? = null,
     format: String? = null
 ): Map<String, Any?> = buildMap {
-    put("type", "string")
+    put("type", "STRING")
     put("description", description)
     format?.let { put("format", it) }
     enum?.let { put("enum", it) }
 }
 
-fun numberProperty(description: String, type: String = "number"): Map<String, Any?> =
-    mapOf("type" to type, "description" to description)
+fun numberProperty(description: String, type: String = "NUMBER"): Map<String, Any?> =
+    mapOf("type" to type.uppercase(), "description" to description)
+
+fun integerProperty(description: String): Map<String, Any?> =
+    mapOf("type" to "INTEGER", "description" to description)
 
 fun booleanProperty(description: String): Map<String, Any?> =
-    mapOf("type" to "boolean", "description" to description)
+    mapOf("type" to "BOOLEAN", "description" to description)
 
 fun objectSchema(
     properties: Map<String, Map<String, Any?>>,
     required: List<String> = emptyList()
 ): Map<String, Any?> = buildMap {
-    put("type", "object")
+    put("type", "OBJECT")
     put("properties", properties)
     if (required.isNotEmpty()) put("required", required)
 }

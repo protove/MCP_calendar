@@ -24,11 +24,35 @@ export type EventCategory =
   | 'important' // 중요 - 코스믹 레드
   | 'other';    // 기타 - 코스믹 그레이
 
-/* 캘린더 이벤트 확장 타입 */
+/* 캘린더 이벤트 확장 타입 — 백엔드 EventResponse 매핑 */
 export interface CalendarEvent extends Event {
   category?: EventCategory;
   color?: string;
   allDay?: boolean;
+  updatedAt?: string;
+  durationMinutes?: number;
+  isMultiDay?: boolean;
+  isPast?: boolean;
+}
+
+/* 백엔드 EventResponse → CalendarEvent 변환 */
+export function toCalendarEvent(raw: Record<string, unknown>): CalendarEvent {
+  return {
+    id: String(raw.id),
+    userId: '',
+    title: raw.title as string,
+    description: raw.description as string | undefined,
+    location: raw.location as string | undefined,
+    startTime: raw.startTime as string,
+    endTime: raw.endTime as string,
+    category: (raw.category as EventCategory) || 'other',
+    allDay: raw.allDay as boolean | undefined,
+    createdAt: raw.createdAt as string,
+    updatedAt: raw.updatedAt as string | undefined,
+    durationMinutes: raw.durationMinutes as number | undefined,
+    isMultiDay: raw.isMultiDay as boolean | undefined,
+    isPast: raw.isPast as boolean | undefined,
+  };
 }
 
 /* 이벤트 폼 데이터 타입 */
@@ -118,5 +142,36 @@ export interface ChatStreamEvent {
   data: string;
   toolName?: string;
   conversationId?: string;
+}
+
+/* ============================================
+   날씨 관련 타입
+   ============================================ */
+
+export type WeatherCondition = 'sunny' | 'cloudy' | 'partly-cloudy' | 'rainy' | 'snowy' | 'foggy';
+
+export interface WeatherData {
+  temp: number;
+  feelsLike: number;
+  condition: WeatherCondition;
+  conditionText: string;
+  humidity: number;
+  windSpeed: number;
+  recommendation: string;
+  city: string;
+  timestamp: string;
+}
+
+export interface DailyForecast {
+  date: string;
+  tempMin: number;
+  tempMax: number;
+  condition: WeatherCondition;
+  conditionText: string;
+}
+
+export interface WeatherForecastResponse {
+  city: string;
+  forecasts: DailyForecast[];
 }
 

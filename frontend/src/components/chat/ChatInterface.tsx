@@ -176,6 +176,16 @@ export function ChatInterface({ onClose }: ChatInterfaceProps) {
           }]);
           setStreamingContent("");
           setActiveTools([]);
+
+          // 캘린더/가계부 도구가 사용되었으면 전역 이벤트 발행
+          const calendarTools = ['create_event', 'update_event', 'delete_event'];
+          const ledgerTools = ['create_transaction', 'update_transaction', 'delete_transaction'];
+          if (toolsUsed.some(t => calendarTools.includes(t))) {
+            window.dispatchEvent(new CustomEvent('calendar-updated'));
+          }
+          if (toolsUsed.some(t => ledgerTools.includes(t))) {
+            window.dispatchEvent(new CustomEvent('ledger-updated'));
+          }
         }
       }
     );

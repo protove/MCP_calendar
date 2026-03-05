@@ -9,6 +9,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import type { DateClickArg, EventClickArg, EventDropArg } from "@fullcalendar/interaction";
 import type { DatesSetArg, EventContentArg } from "@fullcalendar/core";
 import { cn } from "@/lib/utils";
+import { eventApi } from "@/lib/api";
 import type { CalendarEvent, EventFormData, EventModalMode, EventCategory } from "@/types";
 import { CalendarHeader, type CalendarViewType } from "./CalendarHeader";
 import { MiniCalendar } from "./MiniCalendar";
@@ -40,53 +41,6 @@ const getCategoryColor = (category: EventCategory) => {
   return colorMap[category] || colorMap.other;
 };
 
-/* 초기 목업 데이터 */
-const INITIAL_EVENTS: CalendarEvent[] = [
-  {
-    id: "1",
-    userId: "user1",
-    title: "팀 미팅",
-    description: "주간 정기 팀 미팅입니다.",
-    location: "회의실 A",
-    startTime: new Date().toISOString().split("T")[0] + "T10:00:00",
-    endTime: new Date().toISOString().split("T")[0] + "T11:00:00",
-    category: "meeting",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    userId: "user1",
-    title: "프로젝트 마감",
-    description: "MCP Calendar 프로젝트 1차 마감일",
-    startTime: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split("T")[0] + "T00:00:00",
-    endTime: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split("T")[0] + "T23:59:59",
-    category: "important",
-    allDay: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    userId: "user1",
-    title: "개인 운동",
-    description: "저녁 헬스장",
-    location: "피트니스 센터",
-    startTime: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split("T")[0] + "T18:00:00",
-    endTime: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split("T")[0] + "T19:30:00",
-    category: "personal",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "4",
-    userId: "user1",
-    title: "코드 리뷰",
-    description: "프론트엔드 코드 리뷰",
-    startTime: new Date(new Date().setDate(new Date().getDate() + 3)).toISOString().split("T")[0] + "T14:00:00",
-    endTime: new Date(new Date().setDate(new Date().getDate() + 3)).toISOString().split("T")[0] + "T15:00:00",
-    category: "work",
-    createdAt: new Date().toISOString(),
-  },
-];
-
 export function CalendarView() {
   /* FullCalendar 레퍼런스 */
   const calendarRef = useRef<FullCalendar>(null);
@@ -95,7 +49,7 @@ export function CalendarView() {
   const calendarContainerRef = useRef<HTMLDivElement>(null);
 
   /* 상태 관리 */
-  const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [currentView, setCurrentView] = useState<CalendarViewType>('dayGridMonth');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -105,6 +59,34 @@ export function CalendarView() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<EventModalMode>('view');
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | undefined>();
+
+  /* 현재 보이는 연/월 추적 (API 호출용) */
+  const [visibleYear, setVisibleYear] = useState(new Date().getFullYear());
+  const [visibleMonth, setVisibleMonth] = useState(new Date().getMonth() + 1);
+
+  /* ====== 백엔드 API에서 이벤트 조회 ====== */
+  const fetchEvents = useCallback(async (year: number, month: number) => {
+    try {
+      const res = await eventApi.getMonthly(year, month);
+      if (res.data.success && res.data.data) {
+        setEvents(res.data.data);
+      }
+    } catch (err) {
+      console.error('일정을 불러오지 못했습니다:', err);
+    }
+  }, []);
+
+  /* 마운트 시 & 보이는 달 변경 시 이벤트 조회 */
+  useEffect(() => {
+    fetchEvents(visibleYear, visibleMonth);
+  }, [visibleYear, visibleMonth, fetchEvents]);
+
+  /* 채팅에서 일정 변경 시 자동 리프레시 */
+  useEffect(() => {
+    const handler = () => fetchEvents(visibleYear, visibleMonth);
+    window.addEventListener('calendar-updated', handler);
+    return () => window.removeEventListener('calendar-updated', handler);
+  }, [visibleYear, visibleMonth, fetchEvents]);
 
   /* ResizeObserver - 컨테이너 크기 변경 시 FullCalendar 리사이즈 */
   useEffect(() => {
@@ -183,11 +165,19 @@ export function CalendarView() {
     }
   }, [getCalendarApi]);
 
-  /* 날짜 범위 변경 시 */
+  /* 날짜 범위 변경 시 → API 재조회 */
   const handleDatesSet = useCallback((arg: DatesSetArg) => {
     setCurrentDate(arg.view.currentStart);
     setCurrentView(arg.view.type as CalendarViewType);
-  }, []);
+    // 보이는 범위의 중간 날짜로 연/월 결정
+    const mid = new Date((arg.start.getTime() + arg.end.getTime()) / 2);
+    const y = mid.getFullYear();
+    const m = mid.getMonth() + 1;
+    if (y !== visibleYear || m !== visibleMonth) {
+      setVisibleYear(y);
+      setVisibleMonth(m);
+    }
+  }, [visibleYear, visibleMonth]);
 
   /* 날짜 클릭 - 새 이벤트 생성 */
   const handleDateClick = useCallback((arg: DateClickArg) => {
@@ -211,19 +201,29 @@ export function CalendarView() {
     setModalOpen(true);
   }, []);
 
-  /* 이벤트 드래그 앤 드롭 */
-  const handleEventDrop = useCallback((arg: EventDropArg) => {
+  /* 이벤트 드래그 앤 드롭 → API 업데이트 */
+  const handleEventDrop = useCallback(async (arg: EventDropArg) => {
     const { event } = arg;
-    setEvents(prev => prev.map(e => {
-      if (e.id === event.id) {
-        return {
-          ...e,
-          startTime: event.startStr,
-          endTime: event.endStr || event.startStr,
-        };
-      }
-      return e;
-    }));
+    try {
+      await eventApi.update(event.id, {
+        startTime: event.startStr,
+        endTime: event.endStr || event.startStr,
+      } as Partial<EventFormData>);
+      // 로컬 state도 즉시 업데이트
+      setEvents(prev => prev.map(e => {
+        if (e.id === event.id) {
+          return {
+            ...e,
+            startTime: event.startStr,
+            endTime: event.endStr || event.startStr,
+          };
+        }
+        return e;
+      }));
+    } catch (err) {
+      console.error('일정 이동 실패:', err);
+      arg.revert(); // 실패 시 되돌리기
+    }
   }, []);
 
   /* 미니 캘린더 날짜 선택 */
@@ -254,62 +254,44 @@ export function CalendarView() {
     setModalMode('edit');
   }, []);
 
-  /* 이벤트 저장 (생성/수정) */
-  const handleSubmit = useCallback((data: EventFormData) => {
+  /* 이벤트 저장 (생성/수정) → 실제 API 호출 */
+  const handleSubmit = useCallback(async (data: EventFormData) => {
     setIsLoading(true);
-
-    // 시뮬레이션된 API 호출
-    setTimeout(() => {
+    try {
       if (modalMode === 'create') {
-        // 새 이벤트 생성
-        const newEvent: CalendarEvent = {
-          id: `event-${Date.now()}`,
-          userId: 'user1',
-          title: data.title,
-          description: data.description,
-          location: data.location,
-          startTime: data.startTime,
-          endTime: data.endTime,
-          category: data.category,
-          allDay: data.allDay,
-          createdAt: new Date().toISOString(),
-        };
-        setEvents(prev => [...prev, newEvent]);
+        const res = await eventApi.create(data);
+        if (res.data.success && res.data.data) {
+          setEvents(prev => [...prev, res.data.data as CalendarEvent]);
+        }
       } else if (modalMode === 'edit' && selectedEvent) {
-        // 이벤트 수정
-        setEvents(prev => prev.map(e => {
-          if (e.id === selectedEvent.id) {
-            return {
-              ...e,
-              title: data.title,
-              description: data.description,
-              location: data.location,
-              startTime: data.startTime,
-              endTime: data.endTime,
-              category: data.category,
-              allDay: data.allDay,
-            };
-          }
-          return e;
-        }));
+        const res = await eventApi.update(selectedEvent.id, data);
+        if (res.data.success && res.data.data) {
+          const updated = res.data.data as CalendarEvent;
+          setEvents(prev => prev.map(e => e.id === selectedEvent.id ? updated : e));
+        }
       }
-
-      setIsLoading(false);
       handleCloseModal();
-    }, 500);
+    } catch (err) {
+      console.error('일정 저장 실패:', err);
+    } finally {
+      setIsLoading(false);
+    }
   }, [modalMode, selectedEvent, handleCloseModal]);
 
-  /* 이벤트 삭제 */
-  const handleDelete = useCallback(() => {
+  /* 이벤트 삭제 → 실제 API 호출 */
+  const handleDelete = useCallback(async () => {
     if (!selectedEvent) return;
 
     setIsLoading(true);
-
-    setTimeout(() => {
+    try {
+      await eventApi.delete(selectedEvent.id);
       setEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
-      setIsLoading(false);
       handleCloseModal();
-    }, 500);
+    } catch (err) {
+      console.error('일정 삭제 실패:', err);
+    } finally {
+      setIsLoading(false);
+    }
   }, [selectedEvent, handleCloseModal]);
 
   /* 커스텀 이벤트 렌더링 */

@@ -1,101 +1,91 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Clock, MapPin, ArrowRight, Plus } from "lucide-react";
+import { Calendar, Clock, MapPin, ArrowRight, Plus, AlertCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { eventApi } from "@/lib/api";
+import type { CalendarEvent } from "@/types";
 
 /**
  * TodayEventsWidget - 오늘의 일정 위젯
- * 
- * 오늘 예정된 일정들을 시간순으로 보여주는 위젯
- * - 일정 제목, 시간, 장소 표시
- * - 일정이 없을 경우 빈 상태 표시
- * - 캘린더 페이지로 빠른 이동
+ *
+ * 오늘 예정된 일정들을 시간순으로 보여주는 위젯 (실제 API 연동)
+ * - eventApi.getMonthly → 오늘 날짜로 필터
+ * - 시간순 정렬 (toSorted, React BP 7.12)
+ * - 진행 중/지난 일정 표시
+ * - max-h + overflow-y-auto (반응형 스크롤)
  */
 
-// 일정 타입 정의
-interface TodayEvent {
-  id: string;
-  title: string;
-  startTime: string;
-  endTime: string;
-  location?: string;
-  color: string;
+// 카테고리별 색상 매핑 (정적)
+const CATEGORY_COLORS: Record<string, string> = {
+  work: "bg-sky-400",
+  personal: "bg-amber-400",
+  meeting: "bg-cyan-400",
+  important: "bg-rose-400",
+  other: "bg-slate-400",
+};
+
+// 시간 포맷 (HH:MM)
+function formatTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-// Mock 데이터 - 오늘의 일정
-const mockTodayEvents: TodayEvent[] = [
-  {
-    id: "1",
-    title: "팀 스탠드업 미팅",
-    startTime: "09:00",
-    endTime: "09:30",
-    location: "회의실 A",
-    color: "cosmic-blue",
-  },
-  {
-    id: "2",
-    title: "프로젝트 기획 회의",
-    startTime: "11:00",
-    endTime: "12:00",
-    location: "Zoom",
-    color: "cosmic-gold",
-  },
-  {
-    id: "3",
-    title: "점심 약속",
-    startTime: "12:30",
-    endTime: "13:30",
-    location: "강남역 근처",
-    color: "cosmic-light",
-  },
-  {
-    id: "4",
-    title: "코드 리뷰",
-    startTime: "15:00",
-    endTime: "16:00",
-    color: "cosmic-blue",
-  },
-  {
-    id: "5",
-    title: "운동",
-    startTime: "19:00",
-    endTime: "20:30",
-    location: "헬스장",
-    color: "cosmic-gold",
-  },
-];
-
 // 현재 진행 중인 일정인지 확인
-function isCurrentEvent(startTime: string, endTime: string): boolean {
-  const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-  const currentTimeInMinutes = currentHour * 60 + currentMinute;
-
-  const [startHour, startMinute] = startTime.split(":").map(Number);
-  const [endHour, endMinute] = endTime.split(":").map(Number);
-  
-  const startTimeInMinutes = startHour * 60 + startMinute;
-  const endTimeInMinutes = endHour * 60 + endMinute;
-
-  return currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes;
+function isCurrentEvent(start: string, end: string): boolean {
+  const now = Date.now();
+  return now >= new Date(start).getTime() && now < new Date(end).getTime();
 }
 
 // 일정이 지났는지 확인
-function isPastEvent(endTime: string): boolean {
+function isPastEvent(end: string): boolean {
+  return Date.now() > new Date(end).getTime();
+}
+
+// 오늘 날짜인지 확인
+function isToday(dateStr: string): boolean {
+  const d = new Date(dateStr);
   const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-  const currentTimeInMinutes = currentHour * 60 + currentMinute;
-
-  const [endHour, endMinute] = endTime.split(":").map(Number);
-  const endTimeInMinutes = endHour * 60 + endMinute;
-
-  return currentTimeInMinutes > endTimeInMinutes;
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
 }
 
 export function TodayEventsWidget() {
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchEvents = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    try {
+      const res = await eventApi.getMonthly(year, month);
+      const allEvents = res.data.data ?? [];
+      // 오늘 일정만 필터 + 시간순 정렬
+      const todayEvents = allEvents
+        .filter((e) => isToday(e.startTime))
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+      setEvents(todayEvents);
+    } catch {
+      setError("일정을 불러올 수 없습니다.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
+
   const today = new Date();
   const formattedDate = today.toLocaleDateString("ko-KR", {
     month: "long",
@@ -126,45 +116,66 @@ export function TodayEventsWidget() {
           </div>
         </div>
 
-        {/* 캘린더 페이지 링크 */}
         <Link
           href="/calendar"
           className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm 
                      text-cosmic-light transition-all hover:bg-cosmic-blue/10"
         >
           <Plus className="h-4 w-4" />
-          <span>일정 추가</span>
+          <span className="hidden sm:inline">일정 추가</span>
         </Link>
       </div>
 
-      {/* 일정 목록 */}
-      <div className="space-y-3">
-        {mockTodayEvents.length > 0 ? (
-          mockTodayEvents.map((event, index) => {
+      {/* 일정 목록 — max-h + overflow-y-auto 반응형 스크롤 */}
+      <div className="max-h-72 space-y-3 overflow-y-auto pr-1 
+                      scrollbar-thin scrollbar-track-cosmic-dark scrollbar-thumb-cosmic-blue/30">
+        {loading ? (
+          /* 로딩 스켈레톤 */
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="animate-pulse rounded-lg border border-cosmic-blue/10 
+                                     bg-cosmic-dark/50 p-3">
+              <div className="mb-2 h-4 w-32 rounded bg-cosmic-blue/10" />
+              <div className="h-3 w-24 rounded bg-cosmic-blue/10" />
+            </div>
+          ))
+        ) : error ? (
+          /* 에러 상태 */
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <AlertCircle className="mb-2 h-8 w-8 text-cosmic-red/50" />
+            <p className="text-sm text-cosmic-gray">{error}</p>
+            <button
+              onClick={fetchEvents}
+              className="mt-2 flex items-center gap-1 text-xs text-cosmic-light hover:text-cosmic-blue"
+            >
+              <RefreshCw className="h-3 w-3" />
+              재시도
+            </button>
+          </div>
+        ) : events.length > 0 ? (
+          events.map((event, index) => {
             const isCurrent = isCurrentEvent(event.startTime, event.endTime);
             const isPast = isPastEvent(event.endTime);
+            const colorClass = CATEGORY_COLORS[event.category ?? "other"] ?? CATEGORY_COLORS.other;
 
             return (
               <motion.div
                 key={event.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.05 }}
                 className={`relative flex gap-4 rounded-lg border p-3 transition-all
-                           ${isCurrent 
-                             ? "border-cosmic-gold/50 bg-cosmic-gold/10" 
+                           ${isCurrent
+                             ? "border-cosmic-gold/50 bg-cosmic-gold/10"
                              : "border-cosmic-blue/10 bg-cosmic-dark/50 hover:border-cosmic-blue/20"
                            }
                            ${isPast ? "opacity-50" : ""}`}
               >
                 {/* 색상 인디케이터 */}
-                <div
-                  className={`w-1 self-stretch rounded-full bg-${event.color}`}
-                />
+                <div className={`w-1 self-stretch rounded-full ${colorClass}`} />
 
                 {/* 일정 정보 */}
-                <div className="flex-1">
-                  <h4 className={`font-medium ${isPast ? "text-cosmic-gray line-through" : "text-cosmic-white"}`}>
+                <div className="flex-1 min-w-0">
+                  <h4 className={`font-medium truncate ${isPast ? "text-cosmic-gray line-through" : "text-cosmic-white"}`}>
                     {event.title}
                     {isCurrent && (
                       <span className="ml-2 inline-flex items-center rounded-full 
@@ -173,16 +184,16 @@ export function TodayEventsWidget() {
                       </span>
                     )}
                   </h4>
-                  
+
                   <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-cosmic-gray">
                     <span className="flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" />
-                      {event.startTime} - {event.endTime}
+                      <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                      {formatTime(event.startTime)} - {formatTime(event.endTime)}
                     </span>
                     {event.location && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5" />
-                        {event.location}
+                      <span className="flex items-center gap-1 truncate">
+                        <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="truncate">{event.location}</span>
                       </span>
                     )}
                   </div>
@@ -206,7 +217,7 @@ export function TodayEventsWidget() {
       </div>
 
       {/* 더보기 링크 */}
-      {mockTodayEvents.length > 0 && (
+      {!loading && !error && events.length > 0 && (
         <Link
           href="/calendar"
           className="mt-4 flex items-center justify-center gap-1 rounded-lg 

@@ -1,6 +1,5 @@
 package com.mcp.calendar.service
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.mcp.calendar.config.SystemPrompt
 import com.mcp.calendar.dto.request.*
 import com.mcp.calendar.dto.response.ChatResponse
@@ -11,6 +10,7 @@ import mu.KotlinLogging
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.scheduler.Schedulers
+import java.time.Duration
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -27,12 +27,12 @@ class ChatService(
     private val geminiService: GeminiService,
     private val toolRegistry: McpToolRegistry,
     private val functionAdapter: GeminiFunctionAdapter,
-    private val conversationService: ConversationService,
-    private val objectMapper: ObjectMapper
+    private val conversationService: ConversationService
 ) {
 
     companion object {
         private const val MAX_TOOL_ITERATIONS = 10
+        private val BLOCK_TIMEOUT = Duration.ofSeconds(30)
     }
 
     fun chat(userId: Long, message: String, conversationId: String?): ChatResponse {
@@ -51,9 +51,9 @@ class ChatService(
             )
         )
 
-        // 3. 시스템 프롬프트 생성
+        // 3. 시스템 프롬프트 생성 (role 없이 — Gemini system_instruction 스펙)
         val systemInstruction = GeminiContent(
-            role = "user",
+            role = null,
             parts = listOf(GeminiPart(text = SystemPrompt.generateWithCurrentDate("사용자")))
         )
 
@@ -76,7 +76,7 @@ class ChatService(
                 config = GenerationConfig.DEFAULT
             )
 
-            val response = geminiService.generateContentRaw(request).block()
+            val response = geminiService.generateContentRaw(request).block(BLOCK_TIMEOUT)
                 ?: throw RuntimeException("Gemini API 응답이 null입니다.")
 
             if (response.isBlocked()) {
@@ -87,7 +87,7 @@ class ChatService(
 
             // Function Call 확인
             if (response.hasFunctionCall()) {
-                val functionCall = response.getFunctionCall()!!
+                val functionCall = response.getFunctionCall() ?: continue
                 logger.info { "Function Call 감지 (반복 $iteration): ${functionCall.name}" }
 
                 // 사용된 도구 추적
@@ -186,9 +186,9 @@ class ChatService(
                     )
                 )
 
-                // 3. 시스템 프롬프트 생성
+                // 3. 시스템 프롬프트 생성 (role 없이 — Gemini system_instruction 스펙)
                 val systemInstruction = GeminiContent(
-                    role = "user",
+                    role = null,
                     parts = listOf(GeminiPart(text = SystemPrompt.generateWithCurrentDate("사용자")))
                 )
 
@@ -216,7 +216,7 @@ class ChatService(
                         config = GenerationConfig.DEFAULT
                     )
 
-                    val response = geminiService.generateContentRaw(request).block()
+                    val response = geminiService.generateContentRaw(request).block(BLOCK_TIMEOUT)
                     if (response == null) {
                         sink.next(ChatStreamEvent.error("Gemini API 응답이 null입니다."))
                         sink.next(ChatStreamEvent.done(convId))
@@ -234,7 +234,7 @@ class ChatService(
 
                     // Function Call 확인
                     if (response.hasFunctionCall()) {
-                        val functionCall = response.getFunctionCall()!!
+                        val functionCall = response.getFunctionCall() ?: continue
                         val toolName = functionCall.name
                         logger.info { "Stream Function Call 감지 (반복 $iteration): $toolName" }
 
@@ -325,7 +325,7 @@ class ChatService(
     @Suppress("UNCHECKED_CAST")
     private fun executeToolCall(functionCall: FunctionCall, userId: Long): String {
         val toolName = functionCall.name
-        val arguments = functionCall.args
+        val arguments = functionCall.args ?: emptyMap()
 
         val tool = toolRegistry.getTool(toolName)
         if (tool == null) {

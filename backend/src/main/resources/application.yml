@@ -14,8 +14,16 @@ spring:
 gemini:
   api:
     key: ${GEMINI_API_KEY:}
-    model: gemini-2.5-pro
+    model: gemini-2.5-flash-lite
     base-url: https://generativelanguage.googleapis.com/v1beta
+
+# Weather API 설정
+weather:
+  api:
+    key: ${WEATHER_API_KEY:}
+    base-url: https://api.openweathermap.org/data/2.5
+    default-city: Seoul
+    cache-ttl-minutes: 30
 
 # JWT 설정
 jwt:
@@ -58,7 +66,8 @@ logging:
   level:
     root: INFO
     com.mcp.calendar: DEBUG
-    org.springframework.web: DEBUG
+    org.springframework.web: INFO
+    org.springframework.web.reactive.function.client.ExchangeFunctions: WARN
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 

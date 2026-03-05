@@ -48,9 +48,18 @@ class ConversationService(
     fun saveHistory(conversationId: String, contents: List<GeminiContent>) {
         val key = buildKey(conversationId)
         try {
-            // 최대 크기 제한: 오래된 메시지 제거
+            // 최대 크기 제한: 오래된 메시지 제거 (function call 쌍 보존)
             val trimmed = if (contents.size > MAX_HISTORY_SIZE) {
-                contents.takeLast(MAX_HISTORY_SIZE)
+                val sliced = contents.takeLast(MAX_HISTORY_SIZE)
+                // 첫 번째 메시지가 function call/response인 경우 쌍이 깨지지 않도록 보정
+                val firstContent = sliced.firstOrNull()
+                val firstPart = firstContent?.parts?.firstOrNull()
+                if (firstPart?.functionCall != null || firstPart?.functionResponse != null) {
+                    // function call 쌍의 중간에서 잘렸으므로 한 메시지 더 제거
+                    sliced.drop(1)
+                } else {
+                    sliced
+                }
             } else {
                 contents
             }
