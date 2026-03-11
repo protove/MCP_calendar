@@ -27,7 +27,7 @@ weather:
 
 # JWT 설정
 jwt:
-  secret: ${JWT_SECRET:myDefaultSecretKeyForDevelopment1234567890!@#$%^&*}
+  secret: ${JWT_SECRET}  # 환경변수 필수 - 기본값 없음 (보안)
   access-token-expiration: ${JWT_ACCESS_EXPIRATION:1800000}    # 30분 (ms)
   refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7일 (ms)
 
