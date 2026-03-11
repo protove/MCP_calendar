@@ -119,8 +119,6 @@ module "compute" {
   ssh_sg_id         = module.networking.ssh_sg_id
 
   ecr_backend_url  = module.storage.ecr_backend_url
-  ecr_frontend_url = module.storage.ecr_frontend_url
-
   ec2_instance_type = var.ec2_instance_type
   ec2_key_pair_name = var.ec2_key_pair_name
 
@@ -138,10 +136,6 @@ module "compute" {
     WEATHER_API_KEY            = var.weather_api_key_secret_arn != "" ? data.aws_secretsmanager_secret_version.weather_api_key[0].secret_string : ""
   }
 
-  frontend_env_vars = {
-    NODE_ENV = "production"
-    # NEXT_PUBLIC_API_URL은 Docker 빌드 시 --build-arg로 주입 (빌드타임 변수)
-  }
 }
 
 ################################################################################
