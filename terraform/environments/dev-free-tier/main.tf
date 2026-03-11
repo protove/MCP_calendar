@@ -119,6 +119,7 @@ module "compute" {
   backend_sg_id     = module.networking.backend_sg_id
 
   ecr_backend_url  = module.storage.ecr_backend_url
+  domain_name      = var.domain_name
 
   cloudwatch_log_group = aws_cloudwatch_log_group.app.name
 

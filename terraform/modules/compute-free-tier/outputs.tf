@@ -32,3 +32,19 @@ output "alb_zone_id" {
   description = "ALB Hosted Zone ID"
   value       = aws_lb.backend.zone_id
 }
+
+output "acm_certificate_arn" {
+  description = "ACM 인증서 ARN"
+  value       = aws_acm_certificate.api.arn
+}
+
+output "acm_validation_records" {
+  description = "ACM DNS 검증 레코드 (Cloudflare에 추가 필요)"
+  value = {
+    for dvo in aws_acm_certificate.api.domain_validation_options : dvo.domain_name => {
+      name  = dvo.resource_record_name
+      type  = dvo.resource_record_type
+      value = dvo.resource_record_value
+    }
+  }
+}

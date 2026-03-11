@@ -57,3 +57,8 @@ variable "aws_region" {
   type        = string
   default     = "ap-northeast-2"
 }
+
+variable "domain_name" {
+  description = "도메인 이름 (ACM 인증서 발급용)"
+  type        = string
+}
