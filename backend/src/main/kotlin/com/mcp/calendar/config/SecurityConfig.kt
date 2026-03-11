@@ -39,6 +39,7 @@ class SecurityConfig(
                     .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh").permitAll()
                     .requestMatchers("/mcp/**").permitAll()
                     .requestMatchers("/api/weather/**").permitAll()
+                    .requestMatchers("/api/health").permitAll()
                     .requestMatchers("/api/chat/health").permitAll()
                     // 나머지 /api/** 는 인증 필요
                     .requestMatchers("/api/**").authenticated()

@@ -229,7 +229,7 @@ resource "aws_ecs_task_definition" "backend" {
     } : null
 
     healthCheck = {
-      command     = ["CMD-SHELL", "curl -f http://localhost:${var.backend_port}/api/chat/health || exit 1"]
+      command     = ["CMD-SHELL", "curl -f http://localhost:${var.backend_port}/api/health || exit 1"]
       interval    = 30
       timeout     = 15
       retries     = 3
