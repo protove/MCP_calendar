@@ -114,6 +114,7 @@ module "compute" {
   aws_region     = var.aws_region
 
   public_subnet_ids = module.networking.public_subnet_ids
+  vpc_id            = module.networking.vpc_id
   web_sg_id         = module.networking.web_sg_id
   backend_sg_id     = module.networking.backend_sg_id
   ssh_sg_id         = module.networking.ssh_sg_id
@@ -134,6 +135,7 @@ module "compute" {
     JWT_SECRET                 = data.aws_secretsmanager_secret_version.jwt_secret.secret_string
     GEMINI_API_KEY             = data.aws_secretsmanager_secret_version.gemini_api_key.secret_string
     WEATHER_API_KEY            = var.weather_api_key_secret_arn != "" ? data.aws_secretsmanager_secret_version.weather_api_key[0].secret_string : ""
+    CORS_ALLOWED_ORIGINS       = "https://${var.domain_name},https://www.${var.domain_name}"
   }
 
 }

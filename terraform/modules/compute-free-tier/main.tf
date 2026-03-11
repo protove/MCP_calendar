@@ -256,9 +256,67 @@ resource "aws_ecs_service" "backend" {
   deployment_minimum_healthy_percent = 0
   deployment_maximum_percent         = 100
 
+  health_check_grace_period_seconds = 120
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.backend.arn
+    container_name   = "backend"
+    container_port   = var.backend_port
+  }
+
   tags = {
     Name        = "${var.project_name}-${var.environment}-backend-svc"
     Environment = var.environment
+  }
+}
+
+################################################################################
+# ALB — Application Load Balancer
+################################################################################
+resource "aws_lb" "backend" {
+  name               = "${var.project_name}-${var.environment}-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [var.web_sg_id]
+  subnets            = var.public_subnet_ids
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-alb"
+    Environment = var.environment
+  }
+}
+
+resource "aws_lb_target_group" "backend" {
+  name     = "${var.project_name}-${var.environment}-backend-tg"
+  port     = var.backend_port
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    timeout             = 10
+    interval            = 30
+    path                = "/api/health"
+    port                = "traffic-port"
+    matcher             = "200"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-backend-tg"
+    Environment = var.environment
+  }
+}
+
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.backend.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
   }
 }
 

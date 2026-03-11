@@ -51,11 +51,14 @@ class SecurityConfig(
         return http.build()
     }
 
-    // CORS 설정 - 프로덕션에서는 allowedOriginPatterns를 특정 도메인으로 제한 필요
+    // CORS 설정 - 환경변수로 허용 도메인 제어
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOriginPatterns = listOf("*")
+        val origins = (System.getenv("CORS_ALLOWED_ORIGINS") ?: "*")
+            .split(",")
+            .map { it.trim() }
+        configuration.allowedOriginPatterns = origins
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
         configuration.allowedHeaders = listOf("*")
         configuration.allowCredentials = true

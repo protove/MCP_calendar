@@ -13,6 +13,11 @@ variable "public_subnet_ids" {
   type        = list(string)
 }
 
+variable "vpc_id" {
+  description = "VPC ID (ALB 타겟그룹용)"
+  type        = string
+}
+
 variable "web_sg_id" {
   description = "Web Security Group ID"
   type        = string

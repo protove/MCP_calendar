@@ -101,3 +101,8 @@ variable "monthly_budget_usd" {
   type        = string
   default     = "5.0"
 }
+
+variable "domain_name" {
+  description = "도메인 이름 (Cloudflare에서 관리)"
+  type        = string
+}

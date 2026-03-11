@@ -66,10 +66,15 @@ output "ecr_frontend_url" {
 ################################################################################
 output "app_url" {
   description = "애플리케이션 접속 URL"
-  value       = "http://${module.compute.ec2_public_dns}"
+  value       = "https://${var.domain_name}"
 }
 
 output "api_url" {
   description = "API 엔드포인트 URL"
-  value       = "http://${module.compute.ec2_public_dns}:8080/api"
+  value       = "https://api.${var.domain_name}/api"
+}
+
+output "alb_dns_name" {
+  description = "ALB DNS (Cloudflare CNAME 대상)"
+  value       = module.compute.alb_dns_name
 }

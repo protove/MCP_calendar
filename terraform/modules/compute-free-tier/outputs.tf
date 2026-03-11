@@ -32,3 +32,13 @@ output "ecs_task_execution_role_arn" {
   description = "ECS Task Execution Role ARN"
   value       = aws_iam_role.ecs_task_execution.arn
 }
+
+output "alb_dns_name" {
+  description = "ALB DNS 이름 (Cloudflare CNAME 대상)"
+  value       = aws_lb.backend.dns_name
+}
+
+output "alb_zone_id" {
+  description = "ALB Hosted Zone ID"
+  value       = aws_lb.backend.zone_id
+}
