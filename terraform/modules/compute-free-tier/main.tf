@@ -132,7 +132,7 @@ resource "aws_ecs_service" "backend" {
 # Auto Scaling — ECS Service
 ################################################################################
 resource "aws_appautoscaling_target" "backend" {
-  max_capacity       = 3
+  max_capacity       = 2  # Free Tier: 50 vCPU-hours/월, 2 task(1.0 vCPU)=50h 안전 마진
   min_capacity       = 1
   resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.backend.name}"
   scalable_dimension = "ecs:service:DesiredCount"
@@ -150,9 +150,9 @@ resource "aws_appautoscaling_policy" "backend_cpu" {
     predefined_metric_specification {
       predefined_metric_type = "ECSServiceAverageCPUUtilization"
     }
-    target_value       = 70
+    target_value       = 80  # Free Tier 보호: 덜 공격적인 스케일 아웃
     scale_in_cooldown  = 300
-    scale_out_cooldown = 60
+    scale_out_cooldown = 120 # 빠른 스케일 아웃 방지
   }
 }
 
