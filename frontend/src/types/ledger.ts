@@ -206,14 +206,10 @@ export const getCategoryIcon = (category: TransactionCategory): string => {
    백엔드 API 응답 타입 (TransactionController 매핑)
    ============================================ */
 
-/* 거래 타입 (백엔드 enum 매핑) */
-export type BackendTransactionType = 'INCOME' | 'EXPENSE';
-
-
 /* 백엔드 TransactionResponse DTO */
 export interface TransactionResponse {
   id: number;
-  type: BackendTransactionType;
+  type: TransactionType;
   category: TransactionCategory;
   amount: number;
   description: string | null;
@@ -234,10 +230,10 @@ export interface TransactionSummaryResponse {
 
 /* 백엔드 CreateTransactionRequest DTO */
 export interface CreateTransactionRequest {
-  type: BackendTransactionType;
+  type: TransactionType;
   category: TransactionCategory;
   amount: number;
-  description?: string;
+  description: string;
   date: string;
   memo?: string;
 }

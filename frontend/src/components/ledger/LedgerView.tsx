@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Sparkles, Stars } from 'lucide-react';
 import {
@@ -13,7 +13,9 @@ import {
   TransactionModalMode,
   CATEGORY_INFO,
   TransactionCategory,
+  TransactionResponse,
 } from '@/types/ledger';
+import { transactionApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { SummaryCards } from './SummaryCards';
 import { FilterBar } from './FilterBar';
@@ -27,126 +29,48 @@ import { MonthlyChart } from './MonthlyChart';
  * 
  * 우주/별자리 테마로 완전히 재설계된 가계부 페이지
  * 성능 최적화: useMemo, useCallback 활용
+ * 실제 백엔드 API 연동
  */
 
-/* 모의 거래 데이터 (Mock Data) */
-const MOCK_TRANSACTIONS: LedgerTransaction[] = [
-  {
-    id: '1',
-    type: 'expense',
-    category: 'food',
-    amount: 15000,
-    description: '점심 식사',
-    date: '2026-01-23',
-    memo: '동료들과 함께',
-    createdAt: '2026-01-23T12:00:00Z',
-  },
-  {
-    id: '2',
-    type: 'expense',
-    category: 'transport',
-    amount: 5000,
-    description: '지하철 교통비',
-    date: '2026-01-23',
-    createdAt: '2026-01-23T08:00:00Z',
-  },
-  {
-    id: '3',
-    type: 'income',
-    category: 'salary',
-    amount: 4500000,
-    description: '1월 급여',
-    date: '2026-01-20',
-    memo: '정기 월급',
-    createdAt: '2026-01-20T09:00:00Z',
-  },
-  {
-    id: '4',
-    type: 'expense',
-    category: 'shopping',
-    amount: 89000,
-    description: '온라인 쇼핑',
-    date: '2026-01-22',
-    createdAt: '2026-01-22T14:00:00Z',
-  },
-  {
-    id: '5',
-    type: 'expense',
-    category: 'fixed',
-    amount: 500000,
-    description: '월세',
-    date: '2026-01-05',
-    createdAt: '2026-01-05T10:00:00Z',
-  },
-  {
-    id: '6',
-    type: 'expense',
-    category: 'leisure',
-    amount: 35000,
-    description: '영화 관람',
-    date: '2026-01-21',
-    memo: '팝콘 포함',
-    createdAt: '2026-01-21T19:00:00Z',
-  },
-  {
-    id: '7',
-    type: 'income',
-    category: 'sideIncome',
-    amount: 200000,
-    description: '프리랜서 수입',
-    date: '2026-01-15',
-    createdAt: '2026-01-15T16:00:00Z',
-  },
-  {
-    id: '8',
-    type: 'expense',
-    category: 'food',
-    amount: 45000,
-    description: '저녁 회식',
-    date: '2026-01-19',
-    createdAt: '2026-01-19T20:00:00Z',
-  },
-  {
-    id: '9',
-    type: 'expense',
-    category: 'transport',
-    amount: 35000,
-    description: '택시비',
-    date: '2026-01-18',
-    createdAt: '2026-01-18T23:00:00Z',
-  },
-  {
-    id: '10',
-    type: 'expense',
-    category: 'other',
-    amount: 12000,
-    description: '생활용품',
-    date: '2026-01-17',
-    createdAt: '2026-01-17T11:00:00Z',
-  },
-  // 추가 데이터로 무한 스크롤 테스트
-  ...Array.from({ length: 30 }, (_, i) => ({
-    id: `mock-${i + 11}`,
-    type: (i % 5 === 0 ? 'income' : 'expense') as 'income' | 'expense',
-    category: (['food', 'transport', 'shopping', 'leisure', 'fixed', 'other'] as TransactionCategory[])[
-      i % 6
-    ],
-    amount: Math.floor(Math.random() * 100000) + 5000,
-    description: `거래 내역 ${i + 11}`,
-    date: `2026-01-${String(Math.max(1, 20 - Math.floor(i / 3))).padStart(2, '0')}`,
-    createdAt: new Date().toISOString(),
-  })),
-];
+/* 백엔드 TransactionResponse → 프론트엔드 LedgerTransaction 변환 */
+function toTransaction(res: TransactionResponse): LedgerTransaction {
+  return {
+    id: String(res.id),
+    type: res.type as LedgerTransaction['type'],
+    category: res.category as TransactionCategory,
+    amount: res.amount,
+    description: res.description ?? '',
+    date: res.date,
+    memo: res.memo ?? undefined,
+    createdAt: res.createdAt,
+    updatedAt: res.updatedAt,
+  };
+}
 
-/* 월별 차트 모의 데이터 */
-const MOCK_MONTHLY_DATA: MonthlyChartData[] = [
-  { month: '8월', income: 4200000, expense: 2100000 },
-  { month: '9월', income: 4500000, expense: 2800000 },
-  { month: '10월', income: 4300000, expense: 2400000 },
-  { month: '11월', income: 4700000, expense: 2600000 },
-  { month: '12월', income: 5200000, expense: 3500000 },
-  { month: '1월', income: 4700000, expense: 1800000 },
-];
+/* 월별 차트 데이터 (최근 6개월) — API 연동 시 동적으로 생성 */
+function buildMonthlyChartData(transactions: LedgerTransaction[]): MonthlyChartData[] {
+  const now = new Date();
+  const months: MonthlyChartData[] = [];
+
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = `${d.getMonth() + 1}월`;
+    const year = d.getFullYear();
+    const month = d.getMonth();
+
+    let income = 0;
+    let expense = 0;
+    for (const t of transactions) {
+      const td = new Date(t.date);
+      if (td.getFullYear() === year && td.getMonth() === month) {
+        if (t.type === 'income') income += t.amount;
+        else expense += t.amount;
+      }
+    }
+    months.push({ month: label, income, expense });
+  }
+  return months;
+}
 
 /* 초기 필터 상태 */
 const INITIAL_FILTER: FilterState = {
@@ -158,15 +82,34 @@ const INITIAL_FILTER: FilterState = {
 
 export function LedgerView() {
   /* === 상태 관리 === */
-  const [transactions, setTransactions] = useState<LedgerTransaction[]>(MOCK_TRANSACTIONS);
+  const [transactions, setTransactions] = useState<LedgerTransaction[]>([]);
   const [filter, setFilter] = useState<FilterState>(INITIAL_FILTER);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   /* 모달 상태 */
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<TransactionModalMode>('create');
   const [selectedTransaction, setSelectedTransaction] = useState<LedgerTransaction | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  /* === 백엔드에서 거래 데이터 조회 === */
+  const fetchTransactions = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await transactionApi.getAll();
+      if (res.data.success && res.data.data) {
+        setTransactions(res.data.data.map(toTransaction));
+      }
+    } catch (err) {
+      console.error('거래 데이터를 불러올 수 없습니다:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
 
   /* === 필터링된 거래 목록 (useMemo로 최적화) === */
   const filteredTransactions = useMemo(() => {
@@ -264,6 +207,12 @@ export function LedgerView() {
       .sort((a, b) => b.value - a.value);
   }, [filteredTransactions]);
 
+  /* === 월별 차트 데이터 (useMemo로 최적화) === */
+  const monthlyChartData: MonthlyChartData[] = useMemo(
+    () => buildMonthlyChartData(transactions),
+    [transactions]
+  );
+
   /* === 이벤트 핸들러 (useCallback으로 최적화) === */
   
   /* 새 거래 추가 모달 열기 */
@@ -297,38 +246,53 @@ export function LedgerView() {
   const handleSubmitTransaction = useCallback(
     async (data: TransactionFormData) => {
       setIsSubmitting(true);
-
-      // API 호출 시뮬레이션
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      if (modalMode === 'create') {
-        // 새 거래 추가
-        const newTransaction: LedgerTransaction = {
-          id: `new-${Date.now()}`,
-          ...data,
-          createdAt: new Date().toISOString(),
-        };
-        setTransactions((prev) => [newTransaction, ...prev]);
-      } else if (modalMode === 'edit' && selectedTransaction) {
-        // 기존 거래 수정
-        setTransactions((prev) =>
-          prev.map((t) =>
-            t.id === selectedTransaction.id
-              ? { ...t, ...data, updatedAt: new Date().toISOString() }
-              : t
-          )
-        );
+      try {
+        if (modalMode === 'create') {
+          const res = await transactionApi.create({
+            type: data.type,
+            category: data.category,
+            amount: data.amount,
+            description: data.description,
+            date: data.date,
+            memo: data.memo,
+          });
+          if (res.data.success && res.data.data) {
+            setTransactions((prev) => [toTransaction(res.data.data!), ...prev]);
+          }
+        } else if (modalMode === 'edit' && selectedTransaction) {
+          const res = await transactionApi.update(selectedTransaction.id, {
+            type: data.type,
+            category: data.category,
+            amount: data.amount,
+            description: data.description,
+            date: data.date,
+            memo: data.memo,
+          });
+          if (res.data.success && res.data.data) {
+            const updated = toTransaction(res.data.data!);
+            setTransactions((prev) =>
+              prev.map((t) => t.id === selectedTransaction.id ? updated : t)
+            );
+          }
+        }
+        handleCloseModal();
+      } catch (err) {
+        console.error('거래 저장 실패:', err);
+      } finally {
+        setIsSubmitting(false);
       }
-
-      setIsSubmitting(false);
-      handleCloseModal();
     },
     [modalMode, selectedTransaction, handleCloseModal]
   );
 
   /* 거래 삭제 */
-  const handleDeleteTransaction = useCallback((id: string) => {
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
+  const handleDeleteTransaction = useCallback(async (id: string) => {
+    try {
+      await transactionApi.delete(id);
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
+    } catch (err) {
+      console.error('거래 삭제 실패:', err);
+    }
   }, []);
 
   /* 필터 변경 */
@@ -389,7 +353,7 @@ export function LedgerView() {
 
         {/* 차트 섹션 */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <MonthlyChart data={MOCK_MONTHLY_DATA} isLoading={isLoading} />
+          <MonthlyChart data={monthlyChartData} isLoading={isLoading} />
           <CategoryChart data={categoryChartData} isLoading={isLoading} />
         </section>
 

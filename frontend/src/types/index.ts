@@ -7,7 +7,6 @@ export interface User {
 
 export interface Event {
   id: string;
-  userId: string;
   title: string;
   description?: string;
   location?: string;
@@ -39,7 +38,6 @@ export interface CalendarEvent extends Event {
 export function toCalendarEvent(raw: Record<string, unknown>): CalendarEvent {
   return {
     id: String(raw.id),
-    userId: '',
     title: raw.title as string,
     description: raw.description as string | undefined,
     location: raw.location as string | undefined,
@@ -69,10 +67,10 @@ export interface EventFormData {
 /* 이벤트 모달 모드 */
 export type EventModalMode = 'view' | 'create' | 'edit';
 
+/** @deprecated ledger.ts의 LedgerTransaction / TransactionResponse를 사용하세요 */
 export interface Transaction {
   id: string;
-  userId: string;
-  type: 'INCOME' | 'EXPENSE';
+  type: 'income' | 'expense';
   category: string;
   amount: number;
   description?: string;

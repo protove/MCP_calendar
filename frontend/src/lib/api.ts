@@ -106,7 +106,10 @@ export const eventApi = {
 
   /** 일정 단건 조회 */
   get: (id: string) =>
-    api.get<ApiResponse<CalendarEvent>>(`/events/${id}`),
+    api.get<ApiResponse<Record<string, unknown>>>(`/events/${id}`).then(res => ({
+      ...res,
+      data: { ...res.data, data: res.data.data ? toCalendarEvent(res.data.data) : undefined },
+    })),
 
   /** 일정 생성 */
   create: (data: EventFormData) =>
