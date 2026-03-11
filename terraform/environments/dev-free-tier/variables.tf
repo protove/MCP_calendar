@@ -91,3 +91,22 @@ variable "domain_name" {
   description = "도메인 이름 (Cloudflare에서 관리)"
   type        = string
 }
+
+################################################################################
+# CI/CD 변수
+################################################################################
+variable "github_owner" {
+  description = "GitHub 저장소 소유자"
+  type        = string
+}
+
+variable "github_repo" {
+  description = "GitHub 저장소 이름"
+  type        = string
+}
+
+variable "github_branch" {
+  description = "배포 대상 브랜치"
+  type        = string
+  default     = "main"
+}

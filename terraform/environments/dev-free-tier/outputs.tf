@@ -68,3 +68,16 @@ output "alb_dns_name" {
   description = "ALB DNS (Cloudflare CNAME 대상)"
   value       = module.compute.alb_dns_name
 }
+
+################################################################################
+# CI/CD
+################################################################################
+output "pipeline_name" {
+  description = "CodePipeline 이름"
+  value       = module.cicd.pipeline_name
+}
+
+output "github_connection_status" {
+  description = "GitHub Connection 상태 (콘솔에서 승인 필요)"
+  value       = module.cicd.github_connection_status
+}

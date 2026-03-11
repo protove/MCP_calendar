@@ -155,3 +155,24 @@ module "monitoring" {
   monthly_budget_usd      = var.monthly_budget_usd
   budget_alert_thresholds = [50, 80, 100]
 }
+
+################################################################################
+# Module: CI/CD (CodePipeline + CodeBuild)
+################################################################################
+module "cicd" {
+  source = "../../modules/cicd"
+
+  project_name = var.project_name
+  environment  = var.environment
+  aws_region   = var.aws_region
+
+  github_owner  = var.github_owner
+  github_repo   = var.github_repo
+  github_branch = var.github_branch
+
+  ecr_backend_url  = module.storage.ecr_backend_url
+  ecs_cluster_name = module.compute.ecs_cluster_name
+  ecs_service_name = module.compute.ecs_service_name
+
+  cloudwatch_log_group = aws_cloudwatch_log_group.app.name
+}
