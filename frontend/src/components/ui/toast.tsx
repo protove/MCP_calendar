@@ -311,15 +311,12 @@ interface ToastItemProps {
  */
 const ToastItem: React.FC<ToastItemProps> = ({ toast, position }) => {
   const context = React.useContext(ToastContext);
-  
-  if (!context) return null;
-
-  const { removeToast } = context;
+  const removeToast = context?.removeToast;
   const { id, type, title, description, duration, dismissible } = toast;
 
   // 자동 닫힘 타이머
   React.useEffect(() => {
-    if (duration && duration > 0) {
+    if (removeToast && duration && duration > 0) {
       const timer = setTimeout(() => {
         removeToast(id);
       }, duration);
@@ -327,6 +324,10 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, position }) => {
       return () => clearTimeout(timer);
     }
   }, [id, duration, removeToast]);
+
+  if (!context) return null;
+
+  const { removeToast: dismiss } = context;
 
   // 타입별 아이콘
   const icons: Record<ToastType, React.ReactNode> = {
@@ -391,7 +392,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, position }) => {
         {/* 닫기 버튼 */}
         {dismissible && (
           <button
-            onClick={() => removeToast(id)}
+            onClick={() => dismiss(id)}
             className={cn(
               "flex-shrink-0",
               "p-1 rounded-lg",

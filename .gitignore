@@ -55,4 +55,22 @@ Thumbs.db
 # ==========================================
 # Development Notes (로컬 개발 노트)
 # ==========================================
+
+# ==========================================
+# Terraform
+# ==========================================
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+*.tfplan
 FRONTEND_DEV_NOTES.md

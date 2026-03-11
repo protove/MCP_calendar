@@ -22,9 +22,6 @@ export * from "./input";
 // Loading 컴포넌트 - 기존 로딩
 export * from "./loading";
 
-// LoadingSpinner 컴포넌트 - 우주 테마 로딩 스피너
-export * from "./LoadingSpinner";
-
 // Modal 컴포넌트 - 우주 테마 모달
 export * from "./modal";
 
@@ -33,9 +30,6 @@ export * from "./resizable";
 
 // Select 컴포넌트 - 우주 테마 셀렉트 드롭다운
 export * from "./Select";
-
-// Skeleton 컴포넌트 - 우주 테마 스켈레톤 로딩
-export * from "./Skeleton";
 
 // Toast 컴포넌트 - 알림 토스트
 export * from "./toast";

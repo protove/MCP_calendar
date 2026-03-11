@@ -98,7 +98,7 @@ export function MonthlyExpenseWidget() {
 
   // 카테고리별 집계 (useMemo — 반복 연산 최적화, React BP 7.6)
   const { categoryData, totalExpense } = useMemo(() => {
-    const categoryMap = new Map<string, number>();
+    const categoryMap = new Map<TransactionCategory, number>();
 
     // 지출만 집계 (한 번의 루프로 합산, React BP 7.6)
     for (const tx of transactions) {
