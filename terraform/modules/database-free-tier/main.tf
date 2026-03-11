@@ -69,7 +69,7 @@ resource "aws_db_instance" "postgres" {
 
   vpc_security_group_ids = [var.database_sg_id]
 
-  multi_az            = false # Free Tier
+  multi_az            = true # 고가용성
   publicly_accessible = false # 보안: Private Subnet만
 
   backup_retention_period = 1             # Free Tier 최대 1일
