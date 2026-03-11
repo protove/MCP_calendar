@@ -19,36 +19,18 @@ variable "vpc_id" {
 }
 
 variable "web_sg_id" {
-  description = "Web Security Group ID"
+  description = "Web Security Group ID (ALB용)"
   type        = string
 }
 
 variable "backend_sg_id" {
-  description = "Backend Security Group ID"
+  description = "Backend Security Group ID (Fargate 태스크용)"
   type        = string
-}
-
-variable "ssh_sg_id" {
-  description = "SSH Security Group ID (빈 문자열이면 미적용)"
-  type        = string
-  default     = ""
 }
 
 variable "ecr_backend_url" {
   description = "Backend ECR Repository URL"
   type        = string
-}
-
-variable "ec2_instance_type" {
-  description = "EC2 인스턴스 타입"
-  type        = string
-  default     = "t3.micro"
-}
-
-variable "ec2_key_pair_name" {
-  description = "EC2 SSH Key Pair 이름 (미리 생성 필요)"
-  type        = string
-  default     = ""
 }
 
 variable "backend_port" {

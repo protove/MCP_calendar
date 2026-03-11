@@ -9,16 +9,6 @@ output "vpc_id" {
 ################################################################################
 # Compute
 ################################################################################
-output "ec2_public_ip" {
-  description = "EC2 퍼블릭 IP"
-  value       = module.compute.ec2_public_ip
-}
-
-output "ec2_public_dns" {
-  description = "EC2 퍼블릭 DNS"
-  value       = module.compute.ec2_public_dns
-}
-
 output "ecs_cluster_name" {
   description = "ECS Cluster 이름"
   value       = module.compute.ecs_cluster_name

@@ -117,11 +117,8 @@ module "compute" {
   vpc_id            = module.networking.vpc_id
   web_sg_id         = module.networking.web_sg_id
   backend_sg_id     = module.networking.backend_sg_id
-  ssh_sg_id         = module.networking.ssh_sg_id
 
   ecr_backend_url  = module.storage.ecr_backend_url
-  ec2_instance_type = var.ec2_instance_type
-  ec2_key_pair_name = var.ec2_key_pair_name
 
   cloudwatch_log_group = aws_cloudwatch_log_group.app.name
 
@@ -150,7 +147,8 @@ module "monitoring" {
   environment    = var.environment
   alarm_email    = var.alarm_email
 
-  ec2_instance_id    = module.compute.ec2_instance_id
+  ecs_cluster_name   = module.compute.ecs_cluster_name
+  ecs_service_name   = module.compute.ecs_service_name
   rds_instance_id    = module.database.rds_instance_id
   log_group_name     = aws_cloudwatch_log_group.app.name
 

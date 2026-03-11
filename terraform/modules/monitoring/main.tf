@@ -22,49 +22,52 @@ resource "aws_sns_topic_subscription" "email" {
 }
 
 ################################################################################
-# CloudWatch Alarms — EC2
+# CloudWatch Alarms — ECS Fargate
 ################################################################################
-resource "aws_cloudwatch_metric_alarm" "ec2_cpu_high" {
-  alarm_name          = "${var.project_name}-${var.environment}-ec2-cpu-high"
+resource "aws_cloudwatch_metric_alarm" "ecs_cpu_high" {
+  alarm_name          = "${var.project_name}-${var.environment}-ecs-cpu-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 3
   metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
+  namespace           = "AWS/ECS"
   period              = 300
   statistic           = "Average"
   threshold           = 80
-  alarm_description   = "EC2 CPU 사용률 80% 초과 (5분간 3회 연속)"
+  alarm_description   = "ECS CPU 사용률 80% 초과 (5분간 3회 연속)"
   alarm_actions       = [aws_sns_topic.alerts.arn]
   ok_actions          = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    InstanceId = var.ec2_instance_id
+    ClusterName = var.ecs_cluster_name
+    ServiceName = var.ecs_service_name
   }
 
   tags = {
-    Name        = "${var.project_name}-${var.environment}-ec2-cpu-alarm"
+    Name        = "${var.project_name}-${var.environment}-ecs-cpu-alarm"
     Environment = var.environment
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "ec2_status_check" {
-  alarm_name          = "${var.project_name}-${var.environment}-ec2-status-check"
+resource "aws_cloudwatch_metric_alarm" "ecs_memory_high" {
+  alarm_name          = "${var.project_name}-${var.environment}-ecs-memory-high"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2
-  metric_name         = "StatusCheckFailed"
-  namespace           = "AWS/EC2"
+  evaluation_periods  = 3
+  metric_name         = "MemoryUtilization"
+  namespace           = "AWS/ECS"
   period              = 300
-  statistic           = "Maximum"
-  threshold           = 0
-  alarm_description   = "EC2 상태 체크 실패"
+  statistic           = "Average"
+  threshold           = 85
+  alarm_description   = "ECS Memory 사용률 85% 초과 (5분간 3회 연속)"
   alarm_actions       = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    InstanceId = var.ec2_instance_id
+    ClusterName = var.ecs_cluster_name
+    ServiceName = var.ecs_service_name
   }
 
   tags = {
-    Name        = "${var.project_name}-${var.environment}-ec2-status-alarm"
+    Name        = "${var.project_name}-${var.environment}-ecs-memory-alarm"
     Environment = var.environment
   }
 }

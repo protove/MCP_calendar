@@ -8,8 +8,13 @@ variable "environment" {
   type        = string
 }
 
-variable "ec2_instance_id" {
-  description = "모니터링 대상 EC2 인스턴스 ID"
+variable "ecs_cluster_name" {
+  description = "모니터링 대상 ECS 클러스터 이름"
+  type        = string
+}
+
+variable "ecs_service_name" {
+  description = "모니터링 대상 ECS 서비스 이름"
   type        = string
 }
 

@@ -1,18 +1,3 @@
-output "ec2_instance_id" {
-  description = "EC2 인스턴스 ID"
-  value       = aws_instance.app.id
-}
-
-output "ec2_public_ip" {
-  description = "EC2 퍼블릭 IP"
-  value       = aws_instance.app.public_ip
-}
-
-output "ec2_public_dns" {
-  description = "EC2 퍼블릭 DNS"
-  value       = aws_instance.app.public_dns
-}
-
 output "ecs_cluster_id" {
   description = "ECS Cluster ID"
   value       = aws_ecs_cluster.main.id
@@ -21,6 +6,11 @@ output "ecs_cluster_id" {
 output "ecs_cluster_name" {
   description = "ECS Cluster 이름"
   value       = aws_ecs_cluster.main.name
+}
+
+output "ecs_service_name" {
+  description = "ECS Service 이름"
+  value       = aws_ecs_service.backend.name
 }
 
 output "backend_task_definition_arn" {
