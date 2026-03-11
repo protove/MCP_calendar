@@ -34,11 +34,6 @@ variable "ecr_backend_url" {
   type        = string
 }
 
-variable "ecr_frontend_url" {
-  description = "Frontend ECR Repository URL"
-  type        = string
-}
-
 variable "ec2_instance_type" {
   description = "EC2 인스턴스 타입"
   type        = string
@@ -57,23 +52,11 @@ variable "backend_port" {
   default     = 8080
 }
 
-variable "frontend_port" {
-  description = "Frontend 컨테이너 포트"
-  type        = number
-  default     = 3000
-}
-
 variable "backend_env_vars" {
   description = "Backend 컨테이너 환경변수 맵"
   type        = map(string)
   default     = {}
   sensitive   = true
-}
-
-variable "frontend_env_vars" {
-  description = "Frontend 컨테이너 환경변수 맵"
-  type        = map(string)
-  default     = {}
 }
 
 variable "cloudwatch_log_group" {

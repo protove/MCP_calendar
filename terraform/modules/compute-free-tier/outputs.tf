@@ -28,11 +28,6 @@ output "backend_task_definition_arn" {
   value       = aws_ecs_task_definition.backend.arn
 }
 
-output "frontend_task_definition_arn" {
-  description = "Frontend Task Definition ARN"
-  value       = aws_ecs_task_definition.frontend.arn
-}
-
 output "ecs_task_execution_role_arn" {
   description = "ECS Task Execution Role ARN"
   value       = aws_iam_role.ecs_task_execution.arn

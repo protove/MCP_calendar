@@ -244,61 +244,6 @@ resource "aws_ecs_task_definition" "backend" {
 }
 
 ################################################################################
-# ECS Task Definition — Frontend
-################################################################################
-resource "aws_ecs_task_definition" "frontend" {
-  family                   = "${var.project_name}-${var.environment}-frontend"
-  requires_compatibilities = ["EC2"]
-  network_mode             = "bridge"
-  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
-  cpu                      = 256
-  memory                   = 256
-
-  container_definitions = jsonencode([{
-    name      = "frontend"
-    image     = "${var.ecr_frontend_url}:latest"
-    essential = true
-    cpu       = 256
-    memory    = 256
-
-    portMappings = [{
-      containerPort = var.frontend_port
-      hostPort      = 80
-      protocol      = "tcp"
-    }]
-
-    environment = [
-      for k, v in var.frontend_env_vars : {
-        name  = k
-        value = v
-      }
-    ]
-
-    logConfiguration = var.cloudwatch_log_group != "" ? {
-      logDriver = "awslogs"
-      options = {
-        "awslogs-group"         = var.cloudwatch_log_group
-        "awslogs-region"        = var.aws_region
-        "awslogs-stream-prefix" = "frontend"
-      }
-    } : null
-
-    healthCheck = {
-      command     = ["CMD-SHELL", "curl -f http://localhost:${var.frontend_port}/ || exit 1"]
-      interval    = 30
-      timeout     = 5
-      retries     = 3
-      startPeriod = 30
-    }
-  }])
-
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-frontend-task"
-    Environment = var.environment
-  }
-}
-
-################################################################################
 # ECS Service — Backend
 ################################################################################
 resource "aws_ecs_service" "backend" {
@@ -317,21 +262,4 @@ resource "aws_ecs_service" "backend" {
   }
 }
 
-################################################################################
-# ECS Service — Frontend
-################################################################################
-resource "aws_ecs_service" "frontend" {
-  name            = "${var.project_name}-${var.environment}-frontend"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.frontend.arn
-  desired_count   = 1
-  launch_type     = "EC2"
 
-  deployment_minimum_healthy_percent = 0
-  deployment_maximum_percent         = 100
-
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-frontend-svc"
-    Environment = var.environment
-  }
-}
