@@ -43,6 +43,9 @@ FROM eclipse-temurin:21-jre-alpine AS production
 
 WORKDIR /app
 
+# Install curl for health checks
+RUN apk add --no-cache curl
+
 # Add non-root user
 RUN addgroup -S spring && adduser -S spring -G spring
 
