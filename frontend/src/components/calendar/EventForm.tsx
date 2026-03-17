@@ -97,6 +97,14 @@ export function EventForm({
       if (name === 'allDay' && newValue === true) {
         updated.startTime = prev.startTime.split('T')[0] + 'T00:00';
         updated.endTime = prev.endTime.split('T')[0] + 'T23:59';
+      } else if (name === 'allDay' && newValue === false) {
+        // allDay 해제 시 datetime-local 호환 포맷 복원
+        if (!prev.startTime.includes('T')) {
+          updated.startTime = prev.startTime + 'T09:00';
+        }
+        if (!prev.endTime.includes('T')) {
+          updated.endTime = prev.endTime + 'T18:00';
+        }
       }
       return updated;
     });
