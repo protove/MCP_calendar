@@ -17,10 +17,10 @@ data class CreateEventRequest(
     @field:Size(max = 255, message = "장소는 255자 이내여야 합니다")
     val location: String? = null,
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm[:ss]")
     val startTime: LocalDateTime,
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm[:ss]")
     val endTime: LocalDateTime,
 
     val category: String? = "other",

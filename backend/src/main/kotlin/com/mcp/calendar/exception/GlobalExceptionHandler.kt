@@ -96,6 +96,32 @@ class GlobalExceptionHandler {
             .body(errorResponse)
     }
 
+    // GeminiException - Gemini API 관련 에러
+    @ExceptionHandler(GeminiException::class)
+    fun handleGeminiException(
+        e: GeminiException
+    ): ResponseEntity<ErrorResponse> {
+        val httpStatus = when (e) {
+            is GeminiAuthException -> HttpStatus.UNAUTHORIZED
+            is GeminiRateLimitException -> HttpStatus.TOO_MANY_REQUESTS
+            is GeminiBlockedException -> HttpStatus.FORBIDDEN
+            is GeminiConfigurationException -> HttpStatus.SERVICE_UNAVAILABLE
+            else -> HttpStatus.INTERNAL_SERVER_ERROR
+        }
+        logger.warn("GeminiException [{}]: {}", httpStatus.value(), e.message)
+
+        val errorResponse = ErrorResponse(
+            timestamp = LocalDateTime.now(),
+            status = httpStatus.value(),
+            error = httpStatus.reasonPhrase,
+            message = e.message ?: "AI 서비스 오류가 발생했습니다."
+        )
+
+        return ResponseEntity
+            .status(httpStatus)
+            .body(errorResponse)
+    }
+
     // 그 외 모든 에러 - 500 Internal Server Error
     @ExceptionHandler(Exception::class)
     fun handleGenericException(

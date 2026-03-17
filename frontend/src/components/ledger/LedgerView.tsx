@@ -258,6 +258,9 @@ export function LedgerView() {
           });
           if (res.data.success && res.data.data) {
             setTransactions((prev) => [toTransaction(res.data.data!), ...prev]);
+            handleCloseModal();
+          } else {
+            alert(res.data.error?.message || '거래 저장에 실패했습니다.');
           }
         } else if (modalMode === 'edit' && selectedTransaction) {
           const res = await transactionApi.update(selectedTransaction.id, {
@@ -273,11 +276,15 @@ export function LedgerView() {
             setTransactions((prev) =>
               prev.map((t) => t.id === selectedTransaction.id ? updated : t)
             );
+            handleCloseModal();
+          } else {
+            alert(res.data.error?.message || '거래 수정에 실패했습니다.');
           }
         }
-        handleCloseModal();
       } catch (err) {
         console.error('거래 저장 실패:', err);
+        const message = err instanceof Error ? err.message : '거래 저장 중 오류가 발생했습니다.';
+        alert(message);
       } finally {
         setIsSubmitting(false);
       }

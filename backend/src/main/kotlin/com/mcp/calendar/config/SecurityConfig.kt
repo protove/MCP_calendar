@@ -55,13 +55,16 @@ class SecurityConfig(
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        val origins = (System.getenv("CORS_ALLOWED_ORIGINS") ?: "*")
+        val originsEnv = System.getenv("CORS_ALLOWED_ORIGINS")
+        val origins = (originsEnv ?: "http://localhost:3000")
             .split(",")
             .map { it.trim() }
+            .filter { it.isNotBlank() }
         configuration.allowedOriginPatterns = origins
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
         configuration.allowedHeaders = listOf("*")
-        configuration.allowCredentials = true
+        // 와일드카드(*)와 allowCredentials=true는 동시 사용 불가
+        configuration.allowCredentials = !origins.contains("*")
 
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)

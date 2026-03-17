@@ -278,8 +278,81 @@ docker-compose --env-file .env.dev up --build -d
 
 | 버전 | 주요 변경사항 |
 |------|-------------|
+| **v1.2.2** | [일정/거래 생성 실패 핫픽스](#-트러블슈팅-v122) — DateTime 포맷, CORS, 에러 피드백 |
 | **v1.2.1** | ACM SSL 인증서, ALB HTTPS (TLS 1.3), AWS Free Tier 최적화 |
 | **v1.2.0** | Terraform 인프라 — ALB, ECS Fargate, Multi-AZ RDS, Auto Scaling, CI/CD Pipeline |
 | **v1.1.1** | 날씨 MCP 도구 3종, 대시보드 위젯 연동, 보안 핫픽스 |
 | **v1.1.0** | 프론트엔드 리뉴얼 — 우주 테마, 대시보드, 가계부 차트, 반응형 |
 | **v1.0.0** | 로컬 POC — MCP 서버,  LLM Function Calling, JWT 인증, 캘린더/가계부 CRUD |
+
+<br>
+
+## 🔧 트러블슈팅 (v1.2.2)
+
+> **Issue:** [#1 — 캘린더 일정/가계부 거래 생성 실패 및 LLM 채팅 생성 불가](https://github.com/protove/MCP_calendar/issues/1)
+
+### 증상
+- 캘린더에서 일정 추가 버튼 클릭 시 저장되지 않음
+- 가계부에서 거래 추가 버튼 클릭 시 저장되지 않음
+- LLM 채팅을 통한 일정/거래 생성 동작 불가
+- 백엔드 API 단독 테스트 시 정상 동작 확인됨
+
+### 원인 분석 및 수정
+
+#### 1. DateTime 포맷 불일치 (Frontend → Backend) 🔴
+| | 포맷 |
+|---|---|
+| **프론트엔드** (datetime-local) | `yyyy-MM-ddTHH:mm` |
+| **백엔드** (@JsonFormat) | `yyyy-MM-dd'T'HH:mm:ss` |
+
+- 프론트엔드 `<input type="datetime-local">`은 초(`:ss`)를 포함하지 않음
+- Jackson `@JsonFormat` 역직렬화 실패 → **400 Bad Request**
+
+**수정:**
+- **Frontend** (`EventForm.tsx`): 제출 시 `:00` (초) 자동 보정
+- **Backend** (`CreateEventRequest.kt`, `UpdateEventRequest.kt`): `@JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm[:ss]")` — 초 선택적 파싱
+
+#### 2. 종일(allDay) 이벤트 날짜 포맷 오류 🔴
+- allDay 토글 ON 시 `<input type="date">`로 전환 → `yyyy-MM-dd`만 전송
+- 백엔드 `LocalDateTime` 파싱 실패
+
+**수정:** allDay 활성화 시 `T00:00:00` / `T23:59:59` 자동 부착, OFF 복원 시 `T09:00` / `T18:00` 기본값
+
+#### 3. CORS 설정 오류 (Vercel → Cloudflare → ALB) 🔴
+```
+CORS_ALLOWED_ORIGINS 미설정 → 기본값 "*" (와일드카드)
+                                     +
+                        allowCredentials = true
+                                     ↓
+                    브라우저 CORS 정책 위반 → 모든 POST 차단
+```
+
+**수정** (`SecurityConfig.kt`):
+- 기본값을 `http://localhost:3000`으로 변경
+- 와일드카드(`*`) 사용 시 `allowCredentials = false` 자동 설정
+
+#### 4. 에러 피드백 부재 (Silent Failure) ⚠️
+- API 실패 시 `console.error`만 출력, 사용자에게 알림 없음
+- 성공/실패 여부와 관계없이 모달이 닫힘
+
+**수정** (`CalendarView.tsx`, `LedgerView.tsx`):
+- 성공 시에만 모달 닫기
+- 실패 시 `alert()`로 에러 메시지 표시, 모달 유지
+
+#### 5. Gemini 예외 미처리 ⚠️
+- `GeminiAuthException`, `GeminiRateLimitException` 등이 500으로만 반환됨
+
+**수정** (`GlobalExceptionHandler.kt`):
+- Gemini 예외별 적절한 HTTP 상태 코드 매핑 (401, 429, 403, 503)
+
+### 수정된 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `frontend/src/components/calendar/EventForm.tsx` | DateTime 포맷 정규화, allDay 토글 보정 |
+| `frontend/src/components/calendar/CalendarView.tsx` | 에러 피드백 추가, 실패 시 모달 유지 |
+| `frontend/src/components/ledger/LedgerView.tsx` | 에러 피드백 추가, 실패 시 모달 유지 |
+| `backend/.../config/SecurityConfig.kt` | CORS 기본값 변경, credentials 조건부 처리 |
+| `backend/.../dto/request/CreateEventRequest.kt` | DateTime 포맷 유연화 `[:ss]` |
+| `backend/.../dto/request/UpdateEventRequest.kt` | DateTime 포맷 유연화 `[:ss]` |
+| `backend/.../exception/GlobalExceptionHandler.kt` | Gemini 예외 핸들러 추가 |
