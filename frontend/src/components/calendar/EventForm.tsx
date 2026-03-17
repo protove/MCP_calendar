@@ -91,7 +91,15 @@ export function EventForm({
     const { name, value, type } = e.target;
     const newValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
     
-    setFormData(prev => ({ ...prev, [name]: newValue }));
+    setFormData(prev => {
+      const updated = { ...prev, [name]: newValue };
+      // allDay 토글 시 시간 정보 보정
+      if (name === 'allDay' && newValue === true) {
+        updated.startTime = prev.startTime.split('T')[0] + 'T00:00';
+        updated.endTime = prev.endTime.split('T')[0] + 'T23:59';
+      }
+      return updated;
+    });
     
     // 에러 클리어
     if (errors[name as keyof EventFormData]) {
@@ -134,7 +142,24 @@ export function EventForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit(formData);
+      // 백엔드 포맷 (yyyy-MM-dd'T'HH:mm:ss) 맞추기
+      const normalized = { ...formData };
+      if (formData.allDay) {
+        // 종일 이벤트: date → datetime 변환
+        const startDate = formData.startTime.split('T')[0];
+        const endDate = formData.endTime.split('T')[0];
+        normalized.startTime = `${startDate}T00:00:00`;
+        normalized.endTime = `${endDate}T23:59:59`;
+      } else {
+        // 일반 이벤트: 초(:ss) 누락 시 보정
+        if (normalized.startTime && !normalized.startTime.match(/\d{2}:\d{2}:\d{2}$/)) {
+          normalized.startTime = `${normalized.startTime}:00`;
+        }
+        if (normalized.endTime && !normalized.endTime.match(/\d{2}:\d{2}:\d{2}$/)) {
+          normalized.endTime = `${normalized.endTime}:00`;
+        }
+      }
+      onSubmit(normalized);
     }
   };
 

@@ -262,17 +262,24 @@ export function CalendarView() {
         const res = await eventApi.create(data);
         if (res.data.success && res.data.data) {
           setEvents(prev => [...prev, res.data.data as CalendarEvent]);
+          handleCloseModal();
+        } else {
+          alert(res.data.error?.message || '일정 생성에 실패했습니다.');
         }
       } else if (modalMode === 'edit' && selectedEvent) {
         const res = await eventApi.update(selectedEvent.id, data);
         if (res.data.success && res.data.data) {
           const updated = res.data.data as CalendarEvent;
           setEvents(prev => prev.map(e => e.id === selectedEvent.id ? updated : e));
+          handleCloseModal();
+        } else {
+          alert(res.data.error?.message || '일정 수정에 실패했습니다.');
         }
       }
-      handleCloseModal();
     } catch (err) {
       console.error('일정 저장 실패:', err);
+      const message = err instanceof Error ? err.message : '일정 저장 중 오류가 발생했습니다.';
+      alert(message);
     } finally {
       setIsLoading(false);
     }
