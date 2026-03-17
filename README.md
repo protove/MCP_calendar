@@ -278,12 +278,66 @@ docker-compose --env-file .env.dev up --build -d
 
 | 버전 | 주요 변경사항 |
 |------|-------------|
+| **v1.2.3** | [ECS Health Check 실패 수정](#-트러블슈팅-v123) — Alpine 이미지 curl 미포함, 컨테이너 반복 재시작 |
 | **v1.2.2** | [일정/거래 생성 실패 핫픽스](#-트러블슈팅-v122) — DateTime 포맷, CORS, 에러 피드백 |
 | **v1.2.1** | ACM SSL 인증서, ALB HTTPS (TLS 1.3), AWS Free Tier 최적화 |
 | **v1.2.0** | Terraform 인프라 — ALB, ECS Fargate, Multi-AZ RDS, Auto Scaling, CI/CD Pipeline |
 | **v1.1.1** | 날씨 MCP 도구 3종, 대시보드 위젯 연동, 보안 핫픽스 |
 | **v1.1.0** | 프론트엔드 리뉴얼 — 우주 테마, 대시보드, 가계부 차트, 반응형 |
 | **v1.0.0** | 로컬 POC — MCP 서버,  LLM Function Calling, JWT 인증, 캘린더/가계부 CRUD |
+
+<br>
+
+## 🔧 트러블슈팅 (v1.2.3)
+
+> **Issue:** [#3 — ECS 컨테이너 Health Check 실패 — Alpine 이미지에 curl 미포함](https://github.com/protove/MCP_calendar/issues/3)
+
+### 증상
+- ECS 서비스의 태스크가 지속적으로 **UNHEALTHY** 상태로 판정
+- 태스크 반복 재시작 (`failedTasks: 889`), 서비스 불안정
+- Spring Boot 애플리케이션은 정상 시작 완료 (47초)
+- `/api/health` 엔드포인트 자체는 정상 응답 (DB: UP, Redis: UP)
+
+### 원인 분석
+
+#### ECS Health Check 명령과 Docker 이미지 불일치 🔴
+
+```
+ECS Task Definition Health Check:
+  "curl -f http://localhost:8080/api/health || exit 1"
+                    ↓
+Docker Image: eclipse-temurin:21-jre-alpine
+                    ↓
+Alpine Linux에 curl 미포함 → 명령 실패 → UNHEALTHY
+                    ↓
+ECS가 태스크를 반복 교체하는 무한 루프
+```
+
+- Production Docker 이미지가 `eclipse-temurin:21-jre-alpine` 기반
+- **Alpine Linux에는 `curl`이 기본 설치되어 있지 않음**
+- Health check 명령이 `curl` 바이너리를 찾지 못해 항상 exit 1 반환
+
+### 수정
+
+**`backend/Dockerfile`** (Production Stage):
+```dockerfile
+FROM eclipse-temurin:21-jre-alpine AS production
+WORKDIR /app
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+```
+
+### 결과
+- `failedTasks: 889` → **HEALTHY** 상태 정상화
+- ECS 서비스 안정화, ALB Target Group 정상 등록
+- API health 엔드포인트 `200 OK` (DB: UP, Redis: UP) 확인
+
+### 수정된 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `backend/Dockerfile` | Production 스테이지에 `apk add --no-cache curl` 추가 |
 
 <br>
 
