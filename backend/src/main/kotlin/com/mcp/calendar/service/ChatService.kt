@@ -104,7 +104,7 @@ class ChatService(
                 // MCP 도구 실행
                 val toolResult = executeToolCall(functionCall, userId)
 
-                // function response를 contents에 추가
+                // function response를 contents에 추가 (success/failure 상태 포함)
                 contents.add(
                     GeminiContent(
                         role = "user",
@@ -112,14 +112,17 @@ class ChatService(
                             GeminiPart(
                                 functionResponse = FunctionResponse(
                                     name = functionCall.name,
-                                    response = mapOf("result" to toolResult)
+                                    response = mapOf(
+                                        "success" to toolResult.success,
+                                        "result" to toolResult.message
+                                    )
                                 )
                             )
                         )
                     )
                 )
 
-                logger.debug { "도구 실행 완료: ${functionCall.name}, 결과 길이: ${toolResult.length}" }
+                logger.debug { "도구 실행 완료: ${functionCall.name}, 성공: ${toolResult.success}, 결과 길이: ${toolResult.message.length}" }
 
                 // 루프 계속 — Gemini에게 결과를 전달하여 최종 응답 또는 추가 도구 호출을 받음
                 continue
@@ -255,9 +258,12 @@ class ChatService(
                         val toolResult = executeToolCall(functionCall, userId)
 
                         // tool_result 이벤트 발행
-                        sink.next(ChatStreamEvent.toolResult(toolName, "도구 실행이 완료되었습니다."))
+                        sink.next(ChatStreamEvent.toolResult(
+                            toolName,
+                            if (toolResult.success) "도구 실행이 완료되었습니다." else "도구 실행 실패: ${toolResult.message}"
+                        ))
 
-                        // function response를 contents에 추가
+                        // function response를 contents에 추가 (success/failure 상태 포함)
                         contents.add(
                             GeminiContent(
                                 role = "user",
@@ -265,7 +271,10 @@ class ChatService(
                                     GeminiPart(
                                         functionResponse = FunctionResponse(
                                             name = functionCall.name,
-                                            response = mapOf("result" to toolResult)
+                                            response = mapOf(
+                                                "success" to toolResult.success,
+                                                "result" to toolResult.message
+                                            )
                                         )
                                     )
                                 )
@@ -322,30 +331,39 @@ class ChatService(
         }.subscribeOn(Schedulers.boundedElastic())
     }
 
+    data class ToolExecutionResult(
+        val success: Boolean,
+        val message: String
+    )
+
     @Suppress("UNCHECKED_CAST")
-    private fun executeToolCall(functionCall: FunctionCall, userId: Long): String {
+    private fun executeToolCall(functionCall: FunctionCall, userId: Long): ToolExecutionResult {
         val toolName = functionCall.name
         val arguments = functionCall.args ?: emptyMap()
 
         val tool = toolRegistry.getTool(toolName)
         if (tool == null) {
             logger.warn { "등록되지 않은 도구: $toolName" }
-            return "오류: 등록되지 않은 도구입니다 — $toolName"
+            return ToolExecutionResult(false, "오류: 등록되지 않은 도구입니다 — $toolName")
         }
 
         return try {
+            logger.info { "도구 실행 시작: $toolName, 인자: $arguments" }
             val result = tool.execute(arguments, userId)
             val resultText = result.content.joinToString("\n") { it.text }
             if (result.isError) {
                 logger.warn { "도구 실행 오류: $toolName — $resultText" }
+                ToolExecutionResult(false, resultText)
+            } else {
+                logger.info { "도구 실행 성공: $toolName" }
+                ToolExecutionResult(true, resultText)
             }
-            resultText
         } catch (e: IllegalArgumentException) {
             logger.warn { "도구 파라미터 오류: $toolName — ${e.message}" }
-            "파라미터 오류: ${e.message}"
+            ToolExecutionResult(false, "파라미터 오류: ${e.message}")
         } catch (e: Exception) {
             logger.error(e) { "도구 실행 실패: $toolName" }
-            "실행 오류: ${e.message}"
+            ToolExecutionResult(false, "실행 오류: ${e.message}")
         }
     }
 

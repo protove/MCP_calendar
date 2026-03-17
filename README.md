@@ -278,6 +278,7 @@ docker-compose --env-file .env.dev up --build -d
 
 | 버전 | 주요 변경사항 |
 |------|-------------|
+| **v1.2.4** | [MCP 도구 실행 허위 성공 & 토큰 자동 갱신 수정](#-트러블슈팅-v124) — Gemini 허위 성공 응답, 401 토큰 갱신 실패 |
 | **v1.2.3** | [ECS Health Check 실패 수정](#-트러블슈팅-v123) — Alpine 이미지 curl 미포함, 컨테이너 반복 재시작 |
 | **v1.2.2** | [일정/거래 생성 실패 핫픽스](#-트러블슈팅-v122) — DateTime 포맷, CORS, 에러 피드백 |
 | **v1.2.1** | ACM SSL 인증서, ALB HTTPS (TLS 1.3), AWS Free Tier 최적화 |
@@ -285,6 +286,81 @@ docker-compose --env-file .env.dev up --build -d
 | **v1.1.1** | 날씨 MCP 도구 3종, 대시보드 위젯 연동, 보안 핫픽스 |
 | **v1.1.0** | 프론트엔드 리뉴얼 — 우주 테마, 대시보드, 가계부 차트, 반응형 |
 | **v1.0.0** | 로컬 POC — MCP 서버,  LLM Function Calling, JWT 인증, 캘린더/가계부 CRUD |
+
+<br>
+
+## 🔧 트러블슈팅 (v1.2.4)
+
+> **Issue:** [#4 — MCP 도구 실행 허위 성공 응답 & Refresh Token 미작동](https://github.com/protove/MCP_calendar/issues/4)
+
+### 증상
+
+**Bug #1 — MCP 도구 실행 허위 성공:**
+- LLM 채팅에서 "일정을 추가했습니다" 등 성공 응답을 보여주지만 실제 데이터가 저장되지 않음
+- Gemini가 Function Calling 결과의 에러 메시지를 성공으로 오해하여 사용자에게 거짓 확인
+
+**Bug #2 — Refresh Token 미작동:**
+- 로그인 후 30분(Access Token 만료) 이후 접속 시 로그인 상태는 유지되나 대시보드 데이터 로드 실패
+- 401 응답 시 Refresh Token 갱신 시도 없이 즉시 로그아웃 처리
+
+### 원인 분석
+
+#### Bug #1: Function Response에 성공/실패 구분 없음 🔴
+
+```
+MCP Tool 실행 → 예외 발생 → catch에서 에러 문자열 반환
+                         ↓
+functionResponse = { result: "에러 메시지" }
+                         ↓
+성공/실패 필드 없음 → Gemini가 에러 메시지를 결과로 해석
+                         ↓
+"일정을 추가했습니다" 허위 응답 생성
+```
+
+#### Bug #2: Axios 인터셉터가 토큰 갱신 없이 즉시 로그아웃 🔴
+
+```
+Access Token 만료 (30분) → API 호출 → 401 Unauthorized
+                         ↓
+response interceptor: 즉시 localStorage 클리어 + /login 리다이렉트
+                         ↓
+Refresh Token이 있음에도 /auth/refresh 호출 안함
+                         ↓
+대시보드 데이터 로드 실패 + 강제 로그아웃
+```
+
+### 수정
+
+**Bug #1 — `ChatService.kt`:**
+- `ToolExecutionResult(success: Boolean, message: String)` 데이터 클래스 추가
+- `executeToolCall()`이 성공 시 `ToolExecutionResult(true, result)`, 실패 시 `ToolExecutionResult(false, error)` 반환
+- `functionResponse`에 `"success"` 필드 포함: `mapOf("success" to toolResult.success, "result" to toolResult.message)`
+
+**Bug #1 — `SystemPrompt.kt`:**
+- Gemini 시스템 프롬프트에 `success` 필드 확인 지시 추가
+- `success: false` → 사용자에게 실패 알림, `success: true` → 성공 응답
+
+**Bug #2 — `api.ts` Axios 인터셉터:**
+- `isRefreshing` + `failedQueue` 패턴으로 동시 401 처리
+- 401 응답 시 `/auth/refresh` 호출 → 성공하면 원래 요청 재시도
+- Refresh 실패 시에만 로그아웃 처리
+
+**Bug #2 — `api.ts` streamChat (SSE):**
+- `refreshAccessToken()` 헬퍼 + `doFetch()` 재귀 패턴
+- 401 응답 시 토큰 갱신 후 새 토큰으로 재시도
+
+### 결과
+- MCP 도구 실행 실패 시 Gemini가 정확히 "실패했습니다" 메시지 전달
+- Access Token 만료 후에도 자동 갱신으로 대시보드 데이터 정상 로드
+- 동시 다발 401 요청도 큐 처리로 안정적 갱신
+
+### 수정된 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `backend/.../service/ChatService.kt` | `ToolExecutionResult` 추가, `functionResponse`에 success 필드 포함 |
+| `backend/.../config/SystemPrompt.kt` | success 필드 확인 지시 추가 |
+| `frontend/src/lib/api.ts` | 401 자동 토큰 갱신 인터셉터 + streamChat 토큰 갱신 |
 
 <br>
 
