@@ -27,21 +27,85 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Token refresh state
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+}> = [];
+
+function processQueue(error: unknown, token: string | null = null) {
+  failedQueue.forEach((prom) => {
+    if (token) {
+      prom.resolve(token);
+    } else {
+      prom.reject(error);
+    }
+  });
+  failedQueue = [];
+}
+
+// Response interceptor with automatic token refresh
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        // auth 관련 경로에서는 리다이렉트하지 않음
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/refresh') &&
+      !originalRequest.url?.includes('/auth/login')
+    ) {
+      if (typeof window === 'undefined') {
+        return Promise.reject(error);
+      }
+
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) {
+        clearAuthData();
         if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register')) {
           window.location.href = '/login';
         }
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const res = await api.post<ApiResponse<AuthResponse>>('/auth/refresh', { refreshToken });
+        const authData = res.data.data;
+
+        if (authData) {
+          saveAuthData(authData);
+          originalRequest.headers.Authorization = `Bearer ${authData.accessToken}`;
+          processQueue(null, authData.accessToken);
+          return api(originalRequest);
+        } else {
+          throw new Error('Refresh response has no data');
+        }
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        clearAuthData();
+        if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register')) {
+          window.location.href = '/login';
+        }
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
+
     return Promise.reject(error);
   }
 );
@@ -185,6 +249,25 @@ export const chatApi = {
     api.get<ApiResponse<{ status: string; geminiConfigured: boolean }>>('/chat/health'),
 };
 
+// Token refresh helper for non-axios requests (e.g., fetch-based SSE)
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) return null;
+
+  try {
+    const res = await api.post<ApiResponse<AuthResponse>>('/auth/refresh', { refreshToken });
+    const authData = res.data.data;
+    if (authData) {
+      saveAuthData(authData);
+      return authData.accessToken;
+    }
+    return null;
+  } catch {
+    clearAuthData();
+    return null;
+  }
+}
+
 // SSE streaming helper
 export function streamChat(
   request: ChatRequest,
@@ -193,68 +276,77 @@ export function streamChat(
   onDone: () => void
 ): AbortController {
   const controller = new AbortController();
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
-  fetch(`${apiUrl}/chat/stream`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(request),
-    signal: controller.signal,
-  })
-    .then(async (response) => {
-      if (!response.ok) {
-        if (response.status === 401) {
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('token');
-            window.location.href = '/login';
-          }
-          return;
-        }
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No response body');
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data:')) {
-            const data = line.slice(5).trim();
-            if (data === '[DONE]') {
-              onDone();
+  const doFetch = (accessToken: string | null) => {
+    fetch(`${apiUrl}/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify(request),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          if (response.status === 401) {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+              doFetch(newToken);
               return;
             }
-            try {
-              const event: ChatStreamEvent = JSON.parse(data);
-              onEvent(event);
-            } catch {
-              // plain text chunk
-              onEvent({ type: 'content', data });
+            if (typeof window !== 'undefined') {
+              clearAuthData();
+              if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register')) {
+                window.location.href = '/login';
+              }
+            }
+            return;
+          }
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No response body');
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data:')) {
+              const data = line.slice(5).trim();
+              if (data === '[DONE]') {
+                onDone();
+                return;
+              }
+              try {
+                const event: ChatStreamEvent = JSON.parse(data);
+                onEvent(event);
+              } catch {
+                onEvent({ type: 'content', data });
+              }
             }
           }
         }
-      }
-      onDone();
-    })
-    .catch((error) => {
-      if (error.name !== 'AbortError') {
-        onError(error);
-      }
-    });
+        onDone();
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') {
+          onError(error);
+        }
+      });
+  };
+
+  doFetch(typeof window !== 'undefined' ? localStorage.getItem('token') : null);
 
   return controller;
 }
