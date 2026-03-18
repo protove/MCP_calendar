@@ -60,6 +60,9 @@ class SecurityConfig(
             .split(",")
             .map { it.trim() }
             .filter { it.isNotBlank() }
+            .toMutableList()
+        // Vercel preview/production 도메인 패턴 추가 (직접 API 호출 안전망)
+        origins.add("https://*.vercel.app")
         configuration.allowedOriginPatterns = origins
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
         configuration.allowedHeaders = listOf("*")

@@ -278,6 +278,7 @@ docker-compose --env-file .env.dev up --build -d
 
 | 버전 | 주요 변경사항 |
 |------|-------------|
+| **v1.2.5** | [SSE 스트리밍 Network Error 수정](#-트러블슈팅-v125) — CORS 차단, 직접 fetch URL 프록시 전환 |
 | **v1.2.4** | [MCP 도구 실행 허위 성공 & 토큰 자동 갱신 수정](#-트러블슈팅-v124) — Gemini 허위 성공 응답, 401 토큰 갱신 실패 |
 | **v1.2.3** | [ECS Health Check 실패 수정](#-트러블슈팅-v123) — Alpine 이미지 curl 미포함, 컨테이너 반복 재시작 |
 | **v1.2.2** | [일정/거래 생성 실패 핫픽스](#-트러블슈팅-v122) — DateTime 포맷, CORS, 에러 피드백 |
@@ -286,6 +287,79 @@ docker-compose --env-file .env.dev up --build -d
 | **v1.1.1** | 날씨 MCP 도구 3종, 대시보드 위젯 연동, 보안 핫픽스 |
 | **v1.1.0** | 프론트엔드 리뉴얼 — 우주 테마, 대시보드, 가계부 차트, 반응형 |
 | **v1.0.0** | 로컬 POC — MCP 서버,  LLM Function Calling, JWT 인증, 캘린더/가계부 CRUD |
+
+<br>
+
+## 🔧 트러블슈팅 (v1.2.5)
+
+> **Issue:** [#6 — SSE 스트리밍 채팅 Network Error — CORS 차단 및 직접 fetch URL 문제](https://github.com/protove/MCP_calendar/issues/6)
+
+### 증상
+- LLM 채팅 요청(SSE 스트리밍) 시 `Network Error` 발생
+- 일반 API 요청(일정/거래 CRUD 등)은 정상 동작
+
+### 원인 분석
+
+#### SSE 스트리밍의 직접 fetch 호출 → CORS 차단 🔴
+
+```
+일반 API 요청 → axios → baseURL 사용 → 정상
+SSE 스트리밍  → fetch(${apiUrl}/chat/stream) → 브라우저에서 백엔드 직접 호출
+                         ↓
+브라우저 cross-origin 요청 → CORS preflight 필요
+                         ↓
+CORS_ALLOWED_ORIGINS에 Vercel 도메인 누락 또는
+NEXT_PUBLIC_API_URL 미설정 → http://localhost:8080 fallback
+                         ↓
+Network Error
+```
+
+- `streamChat()` 함수가 `process.env.NEXT_PUBLIC_API_URL`로 백엔드에 직접 `fetch` 호출
+- 일반 API는 Next.js rewrite proxy를 경유할 수 있지만, SSE fetch는 직접 호출
+- Vercel에서 `NEXT_PUBLIC_API_URL` 미설정 시 `http://localhost:8080/api` fallback → 당연히 실패
+- CORS에 Vercel preview 도메인(`*.vercel.app`) 미포함
+
+### 수정
+
+**`frontend/src/lib/api.ts`** — streamChat 프록시 전환:
+```typescript
+// Before: 브라우저에서 백엔드로 직접 fetch (CORS 필요)
+fetch(`${apiUrl}/chat/stream`, { ... })
+
+// After: 상대 경로로 Next.js rewrite proxy 경유 (CORS 불필요)
+fetch('/api/chat/stream', { ... })
+```
+
+**`frontend/next.config.js`** — rewrite destination fallback:
+```javascript
+const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+```
+
+**`SecurityConfig.kt`** — Vercel 도메인 안전망:
+```kotlin
+origins.add("https://*.vercel.app")  // preview/production 도메인 패턴
+```
+
+### 결과
+- SSE 요청이 Next.js rewrite proxy를 경유하여 same-origin 요청으로 처리 → CORS 불필요
+- `NEXT_PUBLIC_API_URL` 미설정 시에도 개발환경 fallback 동작
+- Vercel preview 배포에서도 직접 API 호출 가능 (CORS 안전망)
+
+### 수정된 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `frontend/src/lib/api.ts` | streamChat fetch URL을 상대 경로(`/api/chat/stream`)로 변경 |
+| `frontend/next.config.js` | rewrite destination에 `NEXT_PUBLIC_API_URL` fallback 추가 |
+| `backend/.../config/SecurityConfig.kt` | CORS에 `https://*.vercel.app` 패턴 추가 |
+
+### ⚠️ Vercel 환경변수 설정 필요
+
+Next.js rewrite proxy가 올바른 백엔드로 프록시하려면 **Vercel 대시보드**에서 환경변수를 설정해야 합니다:
+
+```
+NEXT_PUBLIC_API_URL = https://api.mcp-calendar.dev/api
+```
 
 <br>
 
