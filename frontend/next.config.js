@@ -6,12 +6,13 @@ const nextConfig = {
   // Output standalone for Docker optimization
   output: 'standalone',
 
-  // API proxy for development (optional)
+  // API rewrite proxy — 모든 /api 요청을 백엔드로 프록시 (CORS 회피)
   async rewrites() {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NEXT_PUBLIC_API_URL + '/:path*',
+        destination: backendUrl + '/:path*',
       },
     ];
   },

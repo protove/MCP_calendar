@@ -276,10 +276,10 @@ export function streamChat(
   onDone: () => void
 ): AbortController {
   const controller = new AbortController();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
   const doFetch = (accessToken: string | null) => {
-    fetch(`${apiUrl}/chat/stream`, {
+    // 상대 경로 사용 → Next.js rewrite proxy 경유 → CORS 불필요 (same-origin)
+    fetch('/api/chat/stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
