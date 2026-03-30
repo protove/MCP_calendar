@@ -278,6 +278,7 @@ docker-compose --env-file .env.dev up --build -d
 
 | 버전 | 주요 변경사항 |
 |------|-------------|
+| **v1.3.0** | [대규모 트래픽 처리 & 운영 안정성 개선](#-성능-개선-기록) — ALB Stickiness, Gemini Rate Limiting, HikariCP Fail Fast |
 | **v1.2.5** | [SSE 스트리밍 Network Error 수정](#-트러블슈팅-v125) — CORS 차단, 직접 fetch URL 프록시 전환 |
 | **v1.2.4** | [MCP 도구 실행 허위 성공 & 토큰 자동 갱신 수정](#-트러블슈팅-v124) — Gemini 허위 성공 응답, 401 토큰 갱신 실패 |
 | **v1.2.3** | [ECS Health Check 실패 수정](#-트러블슈팅-v123) — Alpine 이미지 curl 미포함, 컨테이너 반복 재시작 |
@@ -290,7 +291,42 @@ docker-compose --env-file .env.dev up --build -d
 
 <br>
 
-## 🔧 트러블슈팅 (v1.2.5)
+## � 성능 개선 기록
+
+> **Issue:** [#8 — 대규모 트래픽 처리 — ALB Stickiness, Gemini Rate Limiting, HikariCP Fail Fast](https://github.com/protove/MCP_calendar/issues/8)
+
+### Part 1: 대규모 트래픽 대응
+
+k6로 300 VU 부하 테스트를 실행해 Auto Scaling 발동을 확인하고,
+스케일 아웃 상황을 보며 Terraform 코드를 점검해
+잠재적 문제를 발굴했습니다.
+
+| 항목 | Before | After |
+|------|--------|-------|
+| ECS Auto Scaling | CPU 85% → Task 1→2 스케일 아웃 확인 | 동일 |
+| SSE 연결 안정성 | Stickiness 없어 Task 증가 시 끊김 가능 | lb_cookie Stickiness 적용으로 선제 해결 |
+
+### Part 2: 운영 안정성 개선
+
+코드 리뷰를 통해 발견한 잠재적 문제를 개선했습니다.
+
+| 문제 | 발견 방법 | 개선 내용 |
+|------|----------|----------|
+| Gemini Rate Limiting 없음 | GeminiService 코드 리뷰 | Redis 슬라이딩 윈도우 (분당 10회 / 일 50회) |
+| HikariCP timeout 30초 | application.yml 코드 리뷰 | 3초로 단축 (Fail Fast, 장애 전파 차단) |
+
+### 수정된 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `terraform/modules/compute-free-tier/main.tf` | ALB Target Group에 `lb_cookie` stickiness (3600초) 추가 |
+| `backend/.../service/RateLimitService.kt` | Redis Sorted Set 슬라이딩 윈도우 Rate Limiting 구현 |
+| `backend/.../service/ChatService.kt` | Rate Limit 체크 통합 (chat/chatStream) |
+| `backend/.../resources/application.yml` | HikariCP connection-timeout 30s → 3s |
+
+<br>
+
+## �🔧 트러블슈팅 (v1.2.5)
 
 > **Issue:** [#6 — SSE 스트리밍 채팅 Network Error — CORS 차단 및 직접 fetch URL 문제](https://github.com/protove/MCP_calendar/issues/6)
 
