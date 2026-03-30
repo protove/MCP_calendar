@@ -46,7 +46,7 @@ spring:
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
-      connection-timeout: 30000
+      connection-timeout: 3000  # Fail Fast: DB 장애 시 빠른 실패로 장애 전파 차단
 
   data:
     redis:
@@ -92,7 +92,7 @@ spring:
     hikari:
       maximum-pool-size: 20
       minimum-idle: 10
-      connection-timeout: 30000
+      connection-timeout: 3000  # Fail Fast: DB 장애 시 빠른 실패로 장애 전파 차단
 
   data:
     redis:

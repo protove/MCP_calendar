@@ -4,6 +4,7 @@ import com.mcp.calendar.config.SystemPrompt
 import com.mcp.calendar.dto.request.*
 import com.mcp.calendar.dto.response.ChatResponse
 import com.mcp.calendar.dto.response.ChatStreamEvent
+import com.mcp.calendar.exception.GeminiRateLimitException
 import com.mcp.calendar.mcp.GeminiFunctionAdapter
 import com.mcp.calendar.mcp.McpToolRegistry
 import mu.KotlinLogging
@@ -27,7 +28,8 @@ class ChatService(
     private val geminiService: GeminiService,
     private val toolRegistry: McpToolRegistry,
     private val functionAdapter: GeminiFunctionAdapter,
-    private val conversationService: ConversationService
+    private val conversationService: ConversationService,
+    private val rateLimitService: RateLimitService
 ) {
 
     companion object {
@@ -36,6 +38,9 @@ class ChatService(
     }
 
     fun chat(userId: Long, message: String, conversationId: String?): ChatResponse {
+        // Rate Limit 확인
+        rateLimitService.checkAndIncrement(userId)?.let { throw GeminiRateLimitException(it) }
+
         val convId = conversationId ?: generateConversationId()
 
         logger.info { "Chat 시작 - userId: $userId, conversationId: $convId" }
@@ -173,6 +178,9 @@ class ChatService(
      * SSE 스트리밍 채팅 — Function Calling 루프를 포함하여 각 단계를 이벤트로 발행합니다.
      */
     fun chatStream(userId: Long, message: String, conversationId: String?): Flux<ChatStreamEvent> {
+        // Rate Limit 확인
+        rateLimitService.checkAndIncrement(userId)?.let { throw GeminiRateLimitException(it) }
+
         return Flux.create<ChatStreamEvent> { sink ->
             try {
                 val convId = conversationId ?: generateConversationId()
