@@ -207,6 +207,13 @@ resource "aws_lb_target_group" "backend" {
     matcher             = "200"
   }
 
+  # SSE 스트리밍 연결 유지: Task 스케일 아웃 시 같은 Task로 라우팅
+  stickiness {
+    type            = "lb_cookie"
+    cookie_duration = 3600
+    enabled         = true
+  }
+
   tags = {
     Name        = "${var.project_name}-${var.environment}-backend-tg"
     Environment = var.environment
